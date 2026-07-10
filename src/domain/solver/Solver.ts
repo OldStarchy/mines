@@ -7,8 +7,25 @@ import Constraint from './Constraint';
 export interface Inference {
 	readonly type: 'flag' | 'reveal';
 	readonly cell: Index2D;
-	/** The constraint that concluded this (isAllMines or isAllSafe). */
+	/** The simplest constraint that proves this (isAllMines or isAllSafe). */
 	readonly constraint: Constraint;
+	/**
+	 * Other, independent proofs of the same conclusion, ranked after the
+	 * primary one by increasing complexity. Empty when there is only one.
+	 */
+	readonly alternatives: Constraint[];
+}
+
+/** How many alternative proofs to keep per inference. */
+const MAX_ALTERNATIVES = 3;
+
+/** Ranks proofs: fewest steps, then shallowest, then smallest set. */
+function proofOrder(a: Constraint, b: Constraint): number {
+	return (
+		a.stepCount - b.stepCount ||
+		a.depth - b.depth ||
+		a.size - b.size
+	);
 }
 
 export interface SolveResult {
@@ -40,6 +57,11 @@ export interface SolveOptions {
 	 * nothing, and endgames are where the counter decides anything.
 	 */
 	mineCountCellLimit?: number;
+	/**
+	 * Opt-in meta-gaming: cells the player revealed then undid, mapped to
+	 * what they saw. Fed in as known-mine / known-safe constraints.
+	 */
+	memory?: ReadonlyMap<string, 'mine' | 'safe'>;
 }
 
 export function inferenceToAction(inference: Inference): Action {
@@ -75,6 +97,7 @@ export default function solve(
 		maxConstraints = 2000,
 		totalMines,
 		mineCountCellLimit = 24,
+		memory,
 	}: SolveOptions = {},
 ): SolveResult {
 	/** Tightest known constraint per cell set. */
@@ -201,6 +224,16 @@ export default function solve(
 		}
 	}
 
+	// Opt-in memory: cells the player revealed then undid are known.
+	if (memory) {
+		for (const [key, knowledge] of memory) {
+			const cell = board.cells.atOrNull(Index2D.fromKey(key));
+			if (!cell || cell.state.type !== 'hidden') continue;
+			const mines = knowledge === 'mine' ? 1 : 0;
+			add([key], mines, mines, { type: 'memory', knowledge }, 0);
+		}
+	}
+
 	// Fixpoint: combine each new constraint with every overlapping one.
 	while (queue.length > 0) {
 		const a = queue.shift()!;
@@ -249,27 +282,54 @@ export default function solve(
 		}
 	}
 
-	// Collect conclusions, keeping the shallowest proof per cell.
-	const byCell = new Map<string, Inference>();
+	// Collect every proof of every cell, then per cell rank them and keep
+	// the simplest as primary with the rest as alternatives.
+	const proofsByCell = new Map<string, Constraint[]>();
 	for (const constraint of bySet.values()) {
-		const type = constraint.isAllMines
-			? 'flag'
-			: constraint.isAllSafe
-				? 'reveal'
-				: null;
-		if (!type) continue;
-
+		if (!constraint.isAllMines && !constraint.isAllSafe) continue;
 		for (const cell of constraint.cells) {
-			const existing = byCell.get(cell);
-			if (existing && existing.constraint.depth <= constraint.depth)
-				continue;
-			byCell.set(cell, { type, cell: Index2D.fromKey(cell), constraint });
+			let proofs = proofsByCell.get(cell);
+			if (!proofs) proofsByCell.set(cell, (proofs = []));
+			proofs.push(constraint);
 		}
 	}
 
+	const inferences: Inference[] = [];
+	for (const [cell, proofs] of proofsByCell) {
+		proofs.sort(proofOrder);
+		const primary = proofs[0];
+		const type = primary.isAllMines ? 'flag' : 'reveal';
+
+		// Keep alternatives that agree with the conclusion and cover a
+		// different cell set (a genuinely different way to see it).
+		const seenSets = new Set([primary.setKey]);
+		const alternatives: Constraint[] = [];
+		for (const proof of proofs.slice(1)) {
+			const agrees =
+				type === 'flag' ? proof.isAllMines : proof.isAllSafe;
+			if (!agrees || seenSets.has(proof.setKey)) continue;
+			seenSets.add(proof.setKey);
+			alternatives.push(proof);
+			if (alternatives.length >= MAX_ALTERNATIVES) break;
+		}
+
+		inferences.push({
+			type,
+			cell: Index2D.fromKey(cell),
+			constraint: primary,
+			alternatives,
+		});
+	}
+
+	inferences.sort(
+		(a, b) =>
+			proofOrder(a.constraint, b.constraint) ||
+			a.type.localeCompare(b.type),
+	);
+
 	return {
 		constraints: [...bySet.values()],
-		inferences: [...byCell.values()],
+		inferences,
 		contradictions,
 	};
 }

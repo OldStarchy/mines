@@ -122,4 +122,73 @@ describe('solve', () => {
 		const result = solve(board);
 		expect(result.contradictions.length).toBeGreaterThan(0);
 	});
+
+	describe('undo memory (opt-in meta-gaming)', () => {
+		test('a remembered cell is directly provable', () => {
+			const board = Board.fromStringNotation(['__', '__']);
+			expect(solve(board).inferences).toEqual([]);
+
+			const safe = solve(board, {
+				memory: new Map([['0,0', 'safe']]),
+			}).inferences;
+			expect(safe.map((i) => `${i.type} ${i.cell.x},${i.cell.y}`)).toEqual(
+				['reveal 0,0'],
+			);
+			expect(safe[0].constraint.origin.type).toBe('memory');
+
+			const mine = solve(board, {
+				memory: new Map([['1,1', 'mine']]),
+			}).inferences;
+			expect(mine.map((i) => `${i.type} ${i.cell.x},${i.cell.y}`)).toEqual(
+				['flag 1,1'],
+			);
+		});
+
+		test('memory combines with numbers to resolve otherwise-stuck cells', () => {
+			// The 1 at (0,0) sees three hidden cells holding one mine.
+			// Remembering two of them as safe pins the mine on the third.
+			const board = Board.fromStringNotation([' _', '_!']);
+			expect(
+				solve(board).inferences.some((i) => i.type === 'flag'),
+			).toBe(false);
+
+			const flag = solve(board, {
+				memory: new Map([
+					['1,0', 'safe'],
+					['0,1', 'safe'],
+				]),
+			}).inferences.find((i) => i.type === 'flag');
+
+			expect(flag).toBeDefined();
+			expect(flag!.cell).toEqual({ x: 1, y: 1 });
+			expect(flag!.constraint.origin.type).toBe('subset');
+		});
+	});
+
+	describe('proof ranking', () => {
+		test('the primary proof is never more complex than its alternatives', () => {
+			const board = Board.fromStringNotation(['_!_!', 'F  F', '    ']);
+			for (const inference of solve(board).inferences) {
+				for (const alt of inference.alternatives) {
+					expect(inference.constraint.stepCount).toBeLessThanOrEqual(
+						alt.stepCount,
+					);
+				}
+			}
+		});
+
+		test('explanation steps record the premises they depend on', () => {
+			const board = Board.fromStringNotation(['_!_!', 'F  F', '    ']);
+			const flag = solve(board).inferences.find((i) => i.type === 'flag')!;
+			const steps = explainInference(flag).steps;
+
+			const conclusion = steps.at(-1)!;
+			// Its supporting chain is every earlier step.
+			expect(conclusion.dependsOn.sort()).toEqual(
+				steps.slice(0, -1).map((s) => s.id).sort(),
+			);
+			// Base (number) steps depend on nothing.
+			expect(steps[0].dependsOn).toEqual([]);
+		});
+	});
 });

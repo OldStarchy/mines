@@ -3,6 +3,8 @@ import type Constraint from './Constraint';
 import type { Inference } from './Solver';
 
 export interface ExplanationStep {
+	/** Stable id within this explanation, for cross-referencing steps. */
+	readonly id: string;
 	readonly constraint: Constraint;
 	/** Human-readable statement of what this constraint says and why. */
 	readonly text: string;
@@ -12,6 +14,12 @@ export interface ExplanationStep {
 	 */
 	readonly cells: Index2D[];
 	readonly sourceCell?: Index2D;
+	/**
+	 * Ids of the earlier steps this one is built on (its whole supporting
+	 * sub-chain, transitively). Hovering a step can then light up exactly
+	 * the premises it rests on.
+	 */
+	readonly dependsOn: string[];
 }
 
 export interface Explanation {
@@ -66,37 +74,42 @@ export function describeConstraint(constraint: Constraint): string {
 			return `The groups ${listCells(origin.a.cells)} (${describeBounds(origin.a)}) and ${listCells(origin.b.cells)} (${describeBounds(origin.b)}) overlap on ${cells}, so the overlap holds ${bounds}.`;
 		case 'merge':
 			return `Combining both known bounds on ${cells} gives ${bounds}.`;
-	}
-}
-
-function parents(constraint: Constraint): Constraint[] {
-	const origin = constraint.origin;
-	switch (origin.type) {
-		case 'number':
-		case 'mineCount':
-			return [];
-		case 'subset':
-			return [origin.part, origin.whole];
-		case 'intersection':
-		case 'merge':
-			return [origin.a, origin.b];
+		case 'memory':
+			return origin.knowledge === 'mine'
+				? `You revealed ${cells} earlier and undid it — you already know it is a mine.`
+				: `You revealed ${cells} earlier and undid it — you already know it is safe.`;
 	}
 }
 
 export function explainConstraint(constraint: Constraint): ExplanationStep[] {
 	const steps: ExplanationStep[] = [];
-	const seen = new Set<Constraint>();
+	const ids = new Map<Constraint, string>();
 
-	function visit(c: Constraint) {
-		if (seen.has(c)) return;
-		seen.add(c);
-		for (const parent of parents(c)) visit(parent);
+	function visit(c: Constraint): string {
+		const existing = ids.get(c);
+		if (existing) return existing;
+
+		// Parents are visited first (post-order), so their own supporting
+		// chains are already computed and can be inherited transitively.
+		const dependsOn = new Set<string>();
+		for (const parent of c.parents) {
+			const parentId = visit(parent);
+			dependsOn.add(parentId);
+			const parentStep = steps.find((s) => s.id === parentId);
+			for (const dep of parentStep?.dependsOn ?? []) dependsOn.add(dep);
+		}
+
+		const id = `s${steps.length}`;
+		ids.set(c, id);
 		steps.push({
+			id,
 			constraint: c,
 			text: describeConstraint(c),
 			cells: c.indices,
 			sourceCell: c.origin.type === 'number' ? c.origin.at : undefined,
+			dependsOn: [...dependsOn],
 		});
+		return id;
 	}
 
 	visit(constraint);

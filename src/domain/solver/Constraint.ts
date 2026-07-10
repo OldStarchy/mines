@@ -22,6 +22,14 @@ export type ConstraintOrigin =
 			readonly flags: number;
 	  }
 	| {
+			/**
+			 * The player revealed this cell and then undid it, so they've
+			 * seen whether it is a mine. Opt-in, meta-gaming knowledge.
+			 */
+			readonly type: 'memory';
+			readonly knowledge: 'mine' | 'safe';
+	  }
+	| {
 			/** part ⊆ whole, so (whole \ part) is also constrained. */
 			readonly type: 'subset';
 			readonly whole: Constraint;
@@ -77,6 +85,37 @@ export default class Constraint {
 
 	get indices(): Index2D[] {
 		return this.cells.map(Index2D.fromKey);
+	}
+
+	/** The constraints this one was directly derived from. */
+	get parents(): Constraint[] {
+		switch (this.origin.type) {
+			case 'number':
+			case 'mineCount':
+			case 'memory':
+				return [];
+			case 'subset':
+				return [this.origin.part, this.origin.whole];
+			case 'intersection':
+			case 'merge':
+				return [this.origin.a, this.origin.b];
+		}
+	}
+
+	/**
+	 * Number of distinct constraints in this one's derivation, including
+	 * itself — a proxy for "how hard is this to follow". Used to surface
+	 * the simplest proof of an inference first.
+	 */
+	get stepCount(): number {
+		const seen = new Set<Constraint>();
+		const visit = (c: Constraint) => {
+			if (seen.has(c)) return;
+			seen.add(c);
+			for (const parent of c.parents) visit(parent);
+		};
+		visit(this);
+		return seen.size;
 	}
 
 	/** True when the bounds actually restrict something. */
