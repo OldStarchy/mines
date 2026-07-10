@@ -1,5 +1,5 @@
 import Index2D from './Index2D';
-import { StructEnum } from './StructEnum';
+import type { StructEnum } from './StructEnum';
 
 const Action = {
 	reveal({ x, y }: Index2D) {
