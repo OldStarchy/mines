@@ -432,6 +432,13 @@ body {
 		var(--bevel-dark);
 }
 
+.button-mini {
+	display: block;
+	font-size: 11px;
+	padding: 2px 8px;
+	margin-top: 3px;
+}
+
 .select-trigger {
 	all: unset;
 	display: inline-flex;

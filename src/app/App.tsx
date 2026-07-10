@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import type Cell from '../domain/Cell';
+import type Index2D from '../domain/Index2D';
 import { PRESETS, type PresetName } from '../domain/game/Game';
-import solve, { type Inference } from '../domain/solver/Solver';
+import solve from '../domain/solver/Solver';
 import AssistantPanel from './components/AssistantPanel';
 import BoardView from './components/BoardView';
 import Toolbar from './components/Toolbar';
@@ -35,17 +36,13 @@ export default function App() {
 		game.toggleFlag(cell);
 	};
 
-	const apply = (inference: Inference) => {
+	const applyCells = (type: 'flag' | 'reveal', cells: Index2D[]) => {
 		setHighlight(null);
-		if (inference.type === 'flag') game.toggleFlag(inference.cell);
-		else game.reveal(inference.cell);
-	};
-
-	const applyAll = (inferences: Inference[]) => {
-		setHighlight(null);
-		for (const inference of inferences) {
-			if (inference.type === 'flag') game.toggleFlag(inference.cell);
-			else game.reveal(inference.cell);
+		for (const index of cells) {
+			const cell = game.getState().board.cells.atOrNull(index);
+			if (!cell || cell.state.type !== 'hidden') continue;
+			if (type === 'flag') game.toggleFlag(index);
+			else game.reveal(index);
 		}
 	};
 
@@ -84,8 +81,7 @@ export default function App() {
 					result={result}
 					idle={state.status === 'idle'}
 					onHighlight={setHighlight}
-					onApply={apply}
-					onApplyAll={applyAll}
+					onApplyCells={applyCells}
 				/>
 			</main>
 		</div>

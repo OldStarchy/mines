@@ -1,6 +1,7 @@
 import { Accordion } from '@base-ui/react/accordion';
 import { Switch } from '@base-ui/react/switch';
 import Index2D from '../../domain/Index2D';
+import type Constraint from '../../domain/solver/Constraint';
 import type { SolveResult, Inference } from '../../domain/solver/Solver';
 import { explainInference } from '../../domain/solver/explain';
 import {
@@ -8,6 +9,30 @@ import {
 	highlightStep,
 	type Highlight,
 } from '../highlight';
+
+export type ApplyCells = (type: 'flag' | 'reveal', cells: Index2D[]) => void;
+
+function cellsLabel(cells: readonly string[]): string {
+	if (cells.length > 3) return `${cells.length} tiles`;
+	return cells.map((key) => `(${key})`).join(', ');
+}
+
+/**
+ * A derivation step that pins its whole cell set is directly playable,
+ * even when it only appears as a premise of some deeper inference.
+ */
+function stepAction(
+	constraint: Constraint,
+): { type: 'flag' | 'reveal'; label: string } | null {
+	if (constraint.isAllMines)
+		return { type: 'flag', label: `Flag ${cellsLabel(constraint.cells)}` };
+	if (constraint.isAllSafe)
+		return {
+			type: 'reveal',
+			label: `Reveal ${cellsLabel(constraint.cells)}`,
+		};
+	return null;
+}
 
 function difficultyLabel(inference: Inference): string {
 	const depth = inference.constraint.depth;
@@ -19,11 +44,11 @@ function difficultyLabel(inference: Inference): string {
 function InferenceItem({
 	inference,
 	onHighlight,
-	onApply,
+	onApplyCells,
 }: {
 	inference: Inference;
 	onHighlight: (highlight: Highlight | null) => void;
-	onApply: (inference: Inference) => void;
+	onApplyCells: ApplyCells;
 }) {
 	const { steps, conclusion } = explainInference(inference);
 	const cellLabel = `(${Index2D.key(inference.cell)})`;
@@ -48,26 +73,49 @@ function InferenceItem({
 			</Accordion.Header>
 			<Accordion.Panel className="hint-panel">
 				<ol className="hint-steps">
-					{steps.map((step, i) => (
-						<li
-							key={i}
-							className="hint-step"
-							onMouseEnter={() =>
-								onHighlight(highlightStep(step, inference))
-							}
-							onMouseLeave={() =>
-								onHighlight(highlightInference(inference))
-							}
-						>
-							{step.text}
-						</li>
-					))}
+					{steps.map((step, i) => {
+						const action =
+							i < steps.length - 1
+								? stepAction(step.constraint)
+								: null;
+						return (
+							<li
+								key={i}
+								className="hint-step"
+								onMouseEnter={() =>
+									onHighlight(highlightStep(step, inference))
+								}
+								onMouseLeave={() =>
+									onHighlight(highlightInference(inference))
+								}
+							>
+								{step.text}
+								{action && (
+									<button
+										type="button"
+										className="button button-mini"
+										onClick={() =>
+											onApplyCells(
+												action.type,
+												step.constraint.indices,
+											)
+										}
+									>
+										{action.type === 'flag' ? '🚩' : '⛏'}{' '}
+										{action.label}
+									</button>
+								)}
+							</li>
+						);
+					})}
 				</ol>
 				<p className="hint-conclusion">{conclusion}</p>
 				<button
 					type="button"
 					className="button"
-					onClick={() => onApply(inference)}
+					onClick={() =>
+						onApplyCells(inference.type, [inference.cell])
+					}
 				>
 					Apply
 				</button>
@@ -82,8 +130,7 @@ export default function AssistantPanel({
 	result,
 	idle,
 	onHighlight,
-	onApply,
-	onApplyAll,
+	onApplyCells,
 }: {
 	enabled: boolean;
 	onEnabledChange: (enabled: boolean) => void;
@@ -92,9 +139,16 @@ export default function AssistantPanel({
 	/** True before the first click, when there is nothing to infer. */
 	idle: boolean;
 	onHighlight: (highlight: Highlight | null) => void;
-	onApply: (inference: Inference) => void;
-	onApplyAll: (inferences: Inference[]) => void;
+	onApplyCells: ApplyCells;
 }) {
+	const applyAll = (inferences: Inference[]) => {
+		for (const type of ['flag', 'reveal'] as const) {
+			const cells = inferences
+				.filter((i) => i.type === type)
+				.map((i) => i.cell);
+			if (cells.length > 0) onApplyCells(type, cells);
+		}
+	};
 	const inferences = result
 		? [...result.inferences].sort(
 				(a, b) =>
@@ -154,7 +208,7 @@ export default function AssistantPanel({
 								<button
 									type="button"
 									className="button"
-									onClick={() => onApplyAll(inferences)}
+									onClick={() => applyAll(inferences)}
 								>
 									Apply all
 								</button>
@@ -165,7 +219,7 @@ export default function AssistantPanel({
 										key={`${inference.type}:${Index2D.key(inference.cell)}`}
 										inference={inference}
 										onHighlight={onHighlight}
-										onApply={onApply}
+										onApplyCells={onApplyCells}
 									/>
 								))}
 							</Accordion.Root>
