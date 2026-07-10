@@ -8,6 +8,7 @@ import Toolbar from './components/Toolbar';
 import type { Highlight } from './highlight';
 import { applyTheme, loadTheme, type ThemeName } from './theme';
 import useGame from './useGame';
+import './styles.css';
 
 export default function App() {
 	const { game, state } = useGame();
