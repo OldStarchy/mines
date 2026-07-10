@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import Board from '../Board';
+import Game, { PRESETS } from '../game/Game';
 import { explainInference } from './explain';
 import solve from './Solver';
 
@@ -114,6 +115,36 @@ describe('solve', () => {
 				),
 			).toBe(true);
 		});
+	});
+
+	test('consistent boards never report contradictions', () => {
+		// Regression: subset/intersection derivations produce raw bounds
+		// outside 0..size on perfectly consistent boards; those must clamp
+		// silently instead of being reported as contradictions.
+		const fixtures = [
+			['!_!', '   '],
+			['!!_', '   '],
+			['_!!_', '    '],
+			['!__!', '    '],
+			['!_!_!', '     '],
+		];
+		for (const rows of fixtures) {
+			expect(
+				solve(Board.fromStringNotation(rows)).contradictions,
+			).toEqual([]);
+		}
+
+		// And across whole randomly generated games, with the mine counter.
+		for (let i = 0; i < 20; i++) {
+			const game = new Game(PRESETS.beginner);
+			game.reveal({ x: 4, y: 4 });
+			const state = game.getState();
+			if (state.status !== 'playing') continue;
+			const result = solve(state.board, {
+				totalMines: state.config.bombs,
+			});
+			expect(result.contradictions).toEqual([]);
+		}
 	});
 
 	test('marks contradictions when flags cannot be right', () => {

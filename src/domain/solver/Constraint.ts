@@ -57,6 +57,11 @@ export type ConstraintOrigin =
 export default class Constraint {
 	/** Sorted cell keys (see Index2D.key), the canonical set identity. */
 	readonly cells: readonly string[];
+	/** Same cells as a Set — the solver pairs constraints millions of
+	 * times, so membership tests must not allocate per call. */
+	readonly cellSet: ReadonlySet<string>;
+	/** Key identifying the cell set (ignores bounds). */
+	readonly setKey: string;
 
 	constructor(
 		cells: Iterable<string>,
@@ -66,16 +71,13 @@ export default class Constraint {
 		/** 0 for base constraints, 1 + max(parents) for derived ones. */
 		readonly depth: number,
 	) {
-		this.cells = [...new Set(cells)].sort();
+		this.cellSet = new Set(cells);
+		this.cells = [...this.cellSet].sort();
+		this.setKey = this.cells.join(';');
 	}
 
 	get size() {
 		return this.cells.length;
-	}
-
-	/** Key identifying the cell set (ignores bounds). */
-	get setKey(): string {
-		return this.cells.join(';');
 	}
 
 	/** Key identifying set and bounds, used for exact deduplication. */
@@ -140,17 +142,14 @@ export default class Constraint {
 
 	contains(other: Constraint): boolean {
 		if (other.size > this.size) return false;
-		const set = new Set(this.cells);
-		return other.cells.every((c) => set.has(c));
+		return other.cells.every((c) => this.cellSet.has(c));
 	}
 
 	intersectionWith(other: Constraint): string[] {
-		const set = new Set(this.cells);
-		return other.cells.filter((c) => set.has(c));
+		return other.cells.filter((c) => this.cellSet.has(c));
 	}
 
 	withoutCellsOf(other: Constraint): string[] {
-		const set = new Set(other.cells);
-		return this.cells.filter((c) => !set.has(c));
+		return this.cells.filter((c) => !other.cellSet.has(c));
 	}
 }

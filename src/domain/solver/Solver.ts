@@ -46,6 +46,13 @@ export interface SolveOptions {
 	/** Hard cap on total constraints, guards against pathological boards. */
 	maxConstraints?: number;
 	/**
+	 * Hard cap on constraint-pair derivations. Dense overlap graphs can
+	 * pair thousands of constraints quadratically; past this budget the
+	 * fixpoint stops early (missing some deep proofs) rather than
+	 * freezing the UI for seconds.
+	 */
+	maxPairChecks?: number;
+	/**
 	 * Total mine count as shown on the mine counter. When given, the
 	 * remaining count (total − flags) constrains the set of all hidden
 	 * cells — the late-game "counter" rule.
@@ -95,6 +102,7 @@ export default function solve(
 	{
 		maxDepth = 4,
 		maxConstraints = 2000,
+		maxPairChecks = 100_000,
 		totalMines,
 		mineCountCellLimit = 24,
 		memory,
@@ -126,22 +134,27 @@ export default function solve(
 	) {
 		const candidate = new Constraint(cells, min, max, origin, depth);
 
-		if (candidate.isContradiction || min < 0 || max > candidate.size) {
+		// Derivations routinely step outside 0..size (an intersection's
+		// lower bound is often negative); those bounds just clamp away.
+		// Only bounds unsatisfiable after clamping mark real inconsistency.
+		const clampedMin = Math.max(0, min);
+		const clampedMax = Math.min(candidate.size, max);
+		if (clampedMin > clampedMax) {
 			contradictions.push(candidate);
-			if (candidate.isContradiction) return;
+			return;
 		}
 		if (candidate.size === 0) return;
 
 		const clamped =
-			min < 0 || max > candidate.size
-				? new Constraint(
+			clampedMin === min && clampedMax === max
+				? candidate
+				: new Constraint(
 						candidate.cells,
-						Math.max(0, min),
-						Math.min(candidate.size, max),
+						clampedMin,
+						clampedMax,
 						origin,
 						depth,
-					)
-				: candidate;
+					);
 
 		if (!clamped.isInformative) return;
 		if (bySet.size >= maxConstraints) return;
@@ -235,8 +248,10 @@ export default function solve(
 	}
 
 	// Fixpoint: combine each new constraint with every overlapping one.
-	while (queue.length > 0) {
-		const a = queue.shift()!;
+	let pairBudget = maxPairChecks;
+	let head = 0;
+	while (head < queue.length && pairBudget > 0) {
+		const a = queue[head++];
 		if (bySet.get(a.setKey) !== a) continue; // superseded by a merge
 		if (a.depth >= maxDepth) continue;
 
@@ -246,6 +261,7 @@ export default function solve(
 				if (key !== a.setKey) overlappingKeys.add(key);
 
 		for (const key of overlappingKeys) {
+			if (--pairBudget < 0) break;
 			const b = bySet.get(key);
 			if (!b || b.depth >= maxDepth) continue;
 
