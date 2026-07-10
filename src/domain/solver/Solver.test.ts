@@ -2,12 +2,17 @@ import { describe, expect, test } from 'vitest';
 import Board from '../Board';
 import Game, { PRESETS } from '../game/Game';
 import { explainInference } from './explain';
-import solve from './Solver';
+import solve, { type Inference } from './Solver';
+
+/** One entry per pinned cell, so groupings don't obscure coverage. */
+function summarize(inferences: readonly Inference[]) {
+	return inferences
+		.flatMap((i) => i.cells.map((c) => `${i.type} ${c.x},${c.y}`))
+		.sort();
+}
 
 function inferenceSummaries(board: Board) {
-	return solve(board)
-		.inferences.map((i) => `${i.type} ${i.cell.x},${i.cell.y}`)
-		.sort();
+	return summarize(solve(board).inferences);
 }
 
 describe('solve', () => {
@@ -26,6 +31,18 @@ describe('solve', () => {
 		// Both revealed cells show 1, already accounted for by the flag.
 		const board = Board.fromStringNotation(['F_', '  ']);
 		expect(inferenceSummaries(board)).toEqual(['reveal 1,0']);
+	});
+
+	test('a multi-cell proof is one suggestion applying all its cells', () => {
+		// The 3 at (1,1) pins all three hidden neighbors in one go.
+		const board = Board.fromStringNotation(['!!', '! ']);
+		const inferences = solve(board).inferences;
+
+		expect(inferences).toHaveLength(1);
+		expect(inferences[0].type).toBe('flag');
+		expect(
+			inferences[0].cells.map((c) => `${c.x},${c.y}`).sort(),
+		).toEqual(['0,0', '0,1', '1,0']);
 	});
 
 	test('subset rule: the classic 1-2-1 pattern', () => {
@@ -78,9 +95,7 @@ describe('solve', () => {
 
 			expect(solve(board).inferences).toEqual([]);
 			expect(
-				solve(board, { totalMines: 1 })
-					.inferences.map((i) => `${i.type} ${i.cell.x},${i.cell.y}`)
-					.sort(),
+				summarize(solve(board, { totalMines: 1 }).inferences),
 			).toEqual(['reveal 0,0', 'reveal 1,0']);
 		});
 
@@ -92,9 +107,7 @@ describe('solve', () => {
 
 			expect(solve(board).inferences).toEqual([]);
 			expect(
-				solve(board, { totalMines: 1 })
-					.inferences.map((i) => `${i.type} ${i.cell.x},${i.cell.y}`)
-					.sort(),
+				summarize(solve(board, { totalMines: 1 }).inferences),
 			).toEqual(['reveal 0,0']);
 		});
 
@@ -162,17 +175,13 @@ describe('solve', () => {
 			const safe = solve(board, {
 				memory: new Map([['0,0', 'safe']]),
 			}).inferences;
-			expect(safe.map((i) => `${i.type} ${i.cell.x},${i.cell.y}`)).toEqual(
-				['reveal 0,0'],
-			);
+			expect(summarize(safe)).toEqual(['reveal 0,0']);
 			expect(safe[0].constraint.origin.type).toBe('memory');
 
 			const mine = solve(board, {
 				memory: new Map([['1,1', 'mine']]),
 			}).inferences;
-			expect(mine.map((i) => `${i.type} ${i.cell.x},${i.cell.y}`)).toEqual(
-				['flag 1,1'],
-			);
+			expect(summarize(mine)).toEqual(['flag 1,1']);
 		});
 
 		test('memory combines with numbers to resolve otherwise-stuck cells', () => {
@@ -191,7 +200,7 @@ describe('solve', () => {
 			}).inferences.find((i) => i.type === 'flag');
 
 			expect(flag).toBeDefined();
-			expect(flag!.cell).toEqual({ x: 1, y: 1 });
+			expect(flag!.cells).toEqual([{ x: 1, y: 1 }]);
 			expect(flag!.constraint.origin.type).toBe('subset');
 		});
 	});

@@ -160,7 +160,7 @@ function InferenceItem({
 	onApplyCells: ApplyCells;
 }) {
 	const { steps, conclusion } = explainInference(inference);
-	const cellLabel = `(${Index2D.key(inference.cell)})`;
+	const cellLabel = cellsLabel(inference.cells.map(Index2D.key));
 
 	return (
 		<Accordion.Item
@@ -191,9 +191,13 @@ function InferenceItem({
 				<button
 					type="button"
 					className="button"
-					onClick={() => onApplyCells(inference.type, [inference.cell])}
+					onClick={() =>
+						onApplyCells(inference.type, inference.cells)
+					}
 				>
-					Apply
+					{inference.cells.length === 1
+						? 'Apply'
+						: `Apply all ${inference.cells.length}`}
 				</button>
 				{inference.alternatives.length > 0 && (
 					<AlternativeProofs
@@ -236,7 +240,7 @@ export default function AssistantPanel({
 		for (const type of ['flag', 'reveal'] as const) {
 			const cells = inferences
 				.filter((i) => i.type === type)
-				.map((i) => i.cell);
+				.flatMap((i) => i.cells);
 			if (cells.length > 0) onApplyCells(type, cells);
 		}
 	};
@@ -327,7 +331,7 @@ export default function AssistantPanel({
 									<Accordion.Root className="hints">
 										{inferences.map((inference) => (
 											<InferenceItem
-												key={`${inference.type}:${Index2D.key(inference.cell)}`}
+												key={`${inference.type}:${inference.constraint.setKey}`}
 												inference={inference}
 												onHighlight={onHighlight}
 												onApplyCells={onApplyCells}

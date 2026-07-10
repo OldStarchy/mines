@@ -11,7 +11,7 @@ export type Highlight = ReadonlyMap<string, HighlightRole>;
 export function highlightInference(inference: Inference): Highlight {
 	const map = new Map<string, HighlightRole>();
 	for (const key of inference.constraint.cells) map.set(key, 'group');
-	map.set(Index2D.key(inference.cell), 'target');
+	for (const cell of inference.cells) map.set(Index2D.key(cell), 'target');
 	return map;
 }
 
@@ -23,6 +23,6 @@ export function highlightStep(
 	const map = new Map<string, HighlightRole>();
 	for (const cell of step.cells) map.set(Index2D.key(cell), 'group');
 	if (step.sourceCell) map.set(Index2D.key(step.sourceCell), 'source');
-	map.set(Index2D.key(inference.cell), 'target');
+	for (const cell of inference.cells) map.set(Index2D.key(cell), 'target');
 	return map;
 }

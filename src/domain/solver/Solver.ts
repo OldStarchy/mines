@@ -6,7 +6,11 @@ import Constraint from './Constraint';
 
 export interface Inference {
 	readonly type: 'flag' | 'reveal';
-	readonly cell: Index2D;
+	/**
+	 * Every cell the proof pins — applied together, like a chord: a 3
+	 * with three hidden neighbors is one suggestion flagging all three.
+	 */
+	readonly cells: Index2D[];
 	/** The simplest constraint that proves this (isAllMines or isAllSafe). */
 	readonly constraint: Constraint;
 	/**
@@ -71,10 +75,10 @@ export interface SolveOptions {
 	memory?: ReadonlyMap<string, 'mine' | 'safe'>;
 }
 
-export function inferenceToAction(inference: Inference): Action {
-	return inference.type === 'flag'
-		? Action.flag(inference.cell)
-		: Action.reveal(inference.cell);
+export function inferenceToActions(inference: Inference): Action[] {
+	return inference.cells.map((cell) =>
+		inference.type === 'flag' ? Action.flag(cell) : Action.reveal(cell),
+	);
 }
 
 /**
@@ -299,7 +303,7 @@ export default function solve(
 	}
 
 	// Collect every proof of every cell, then per cell rank them and keep
-	// the simplest as primary with the rest as alternatives.
+	// the simplest as that cell's primary proof.
 	const proofsByCell = new Map<string, Constraint[]>();
 	for (const constraint of bySet.values()) {
 		if (!constraint.isAllMines && !constraint.isAllSafe) continue;
@@ -310,20 +314,28 @@ export default function solve(
 		}
 	}
 
-	const inferences: Inference[] = [];
-	for (const [cell, proofs] of proofsByCell) {
+	// Each distinct primary constraint becomes one inference pinning all
+	// of its cells at once, so a multi-cell proof is a single suggestion.
+	const primaries = new Set<Constraint>();
+	for (const proofs of proofsByCell.values()) {
 		proofs.sort(proofOrder);
-		const primary = proofs[0];
+		primaries.add(proofs[0]);
+	}
+
+	const inferences: Inference[] = [];
+	for (const primary of primaries) {
 		const type = primary.isAllMines ? 'flag' : 'reveal';
 
-		// Keep alternatives that agree with the conclusion and cover a
-		// different cell set (a genuinely different way to see it).
+		// Alternatives must reach the same conclusion for every pinned
+		// cell via a different cell set. Any such constraint contains the
+		// first pinned cell, so that cell's proof list has them all.
 		const seenSets = new Set([primary.setKey]);
 		const alternatives: Constraint[] = [];
-		for (const proof of proofs.slice(1)) {
+		for (const proof of proofsByCell.get(primary.cells[0]) ?? []) {
 			const agrees =
 				type === 'flag' ? proof.isAllMines : proof.isAllSafe;
 			if (!agrees || seenSets.has(proof.setKey)) continue;
+			if (!proof.contains(primary)) continue;
 			seenSets.add(proof.setKey);
 			alternatives.push(proof);
 			if (alternatives.length >= MAX_ALTERNATIVES) break;
@@ -331,7 +343,7 @@ export default function solve(
 
 		inferences.push({
 			type,
-			cell: Index2D.fromKey(cell),
+			cells: primary.indices,
 			constraint: primary,
 			alternatives,
 		});

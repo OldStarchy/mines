@@ -117,17 +117,18 @@ export function explainConstraint(constraint: Constraint): ExplanationStep[] {
 }
 
 export function explainInference(inference: Inference): Explanation {
-	const { constraint, cell, type } = inference;
+	const { constraint, cells, type } = inference;
 	const steps = explainConstraint(constraint);
+	const targets = listCells(cells.map(Index2D.key));
 
 	const conclusion =
 		type === 'flag'
-			? constraint.size === 1
-				? `Therefore (${Index2D.key(cell)}) must be a mine — flag it.`
-				: `All ${constraint.size} cells ${listCells(constraint.cells)} must be mines, so (${Index2D.key(cell)}) can be flagged.`
-			: constraint.size === 1
-				? `Therefore (${Index2D.key(cell)}) cannot be a mine — it is safe to reveal.`
-				: `None of ${listCells(constraint.cells)} can be mines, so (${Index2D.key(cell)}) is safe to reveal.`;
+			? cells.length === 1
+				? `Therefore ${targets} must be a mine — flag it.`
+				: `Therefore ${targets} must all be mines — flag them in one go.`
+			: cells.length === 1
+				? `Therefore ${targets} cannot be a mine — it is safe to reveal.`
+				: `None of ${targets} can be mines — reveal them all in one go.`;
 
 	return { steps, conclusion };
 }

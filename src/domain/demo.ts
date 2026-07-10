@@ -1,6 +1,6 @@
 import Action from './Action';
 import Board from './Board';
-import solve, { inferenceToAction } from './solver/Solver';
+import solve, { inferenceToActions } from './solver/Solver';
 import { explainInference } from './solver/explain';
 
 let board = Board.ofSize(10, 10);
@@ -17,7 +17,7 @@ while (result.inferences.length > 0) {
 	console.log();
 
 	board = result.inferences
-		.map(inferenceToAction)
+		.flatMap(inferenceToActions)
 		.reduce((board, action) => board.applyAction(action), board);
 	console.log(board.renderToString({ size: 3 }));
 	console.log('='.repeat(10));
