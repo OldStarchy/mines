@@ -4,6 +4,7 @@ import Cell from './Cell';
 import CellState, { type BombCount } from './CellState';
 import Index2D from './Index2D';
 import Range2D from './Range2D';
+import type { Size2D } from './Size2D';
 
 export default class Board {
 	private constructor(readonly cells: Array2D<Cell>) {}
@@ -57,6 +58,33 @@ export default class Board {
 				return new Cell(x, y, CellState.hidden, false);
 			}),
 		);
+	}
+
+	/**
+	 * A fresh, fully hidden board with bombs at the given cell keys
+	 * (see Index2D.key). Deterministic — used to replay a recorded game
+	 * from its fixed mine layout.
+	 */
+	static create(size: Size2D, mineKeys: Iterable<string>): Board {
+		const mines = new Set(mineKeys);
+		return new Board(
+			Array2D.from(size, ({ x, y }) => {
+				return new Cell(
+					x,
+					y,
+					CellState.hidden,
+					mines.has(Index2D.key({ x, y })),
+				);
+			}),
+		);
+	}
+
+	/** Bomb positions as cell keys (see Index2D.key). */
+	mineKeys(): string[] {
+		return this.cells
+			.toArray()
+			.filter((c) => c.isBomb)
+			.map(Index2D.key);
 	}
 
 	applyAction(action: Action) {
@@ -117,6 +145,31 @@ export default class Board {
 					cells = cells.with(
 						index,
 						cell.with({ state: CellState.hidden }),
+					);
+					break;
+				}
+
+				case 'chord': {
+					const { index } = action;
+					const cell = cells.at(index);
+					if (cell.state.type !== 'revealed') continue;
+
+					const neighborhood = cells
+						.slice(Range2D.around(index))
+						.toArray()
+						.filter((c) => c !== cell);
+
+					const flags = neighborhood.filter(
+						(c) => c.state.type === 'flagged',
+					).length;
+
+					// Only chord a satisfied number.
+					if (flags !== cell.state.number) continue;
+
+					queue.unshift(
+						...neighborhood
+							.filter((c) => c.state.type === 'hidden')
+							.map(Action.reveal),
 					);
 					break;
 				}

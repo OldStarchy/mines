@@ -18,6 +18,14 @@ const Action = {
 	unflag({ x, y }: Index2D) {
 		return { type: 'unflag', index: { x, y } } as const;
 	},
+	/**
+	 * Reveal all non-flagged hidden neighbors of a revealed number, but
+	 * only when that number is already satisfied by its flags. The
+	 * classic middle-click "chord".
+	 */
+	chord({ x, y }: Index2D) {
+		return { type: 'chord', index: { x, y } } as const;
+	},
 } as const;
 type Action = StructEnum<typeof Action>;
 

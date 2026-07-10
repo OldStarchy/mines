@@ -97,4 +97,50 @@ describe('Board', () => {
 			expect(board.isLost).toBe(false);
 		});
 	});
+
+	describe('chord', () => {
+		test('reveals non-flagged neighbors when the number is satisfied', () => {
+			// The 1 at (0,0) sees one bomb, flagged at (1,1).
+			const board = Board.fromStringNotation([
+				' __',
+				'_F_',
+				'___',
+			]).applyAction(Action.chord({ x: 0, y: 0 }));
+
+			// (1,0) and (0,1) revealed; the flagged bomb is untouched.
+			expect(board.cells.at({ x: 1, y: 0 }).state.type).toBe('revealed');
+			expect(board.cells.at({ x: 0, y: 1 }).state.type).toBe('revealed');
+			expect(board.cells.at({ x: 1, y: 1 }).state.type).toBe('flagged');
+		});
+
+		test('does nothing when the number is not satisfied by flags', () => {
+			const before = Board.fromStringNotation([' __', '_!_', '___']);
+			const after = before.applyAction(Action.chord({ x: 0, y: 0 }));
+
+			expect(after.cells.at({ x: 1, y: 0 }).state.type).toBe('hidden');
+		});
+
+		test('detonates a mis-flagged chord', () => {
+			// The 1 is satisfied by a wrong flag, so chording hits the mine.
+			const board = Board.fromStringNotation([
+				' f_',
+				'_!_',
+				'___',
+			]).applyAction(Action.chord({ x: 0, y: 0 }));
+
+			expect(board.isLost).toBe(true);
+		});
+	});
+
+	describe('create', () => {
+		test('places bombs deterministically at the given keys', () => {
+			const board = Board.create({ width: 3, height: 2 }, ['1,0', '2,1']);
+
+			expect(board.mineKeys().sort()).toEqual(['1,0', '2,1']);
+			expect(board.bombCount).toBe(2);
+			expect(
+				board.cells.toArray().every((c) => c.state.type === 'hidden'),
+			).toBe(true);
+		});
+	});
 });
