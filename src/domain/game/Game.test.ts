@@ -2,6 +2,22 @@ import { describe, expect, test } from 'vitest';
 import Index2D from '../Index2D';
 import Game, { PRESETS } from './Game';
 
+/**
+ * Deterministic 5x5 mid-game: bombs pocket the (0,0) corner, and the
+ * loaded reveal at (4,4) has flooded everything else, so exactly (0,0)
+ * and the three bombs are still hidden and the game is in progress.
+ * (A random board can flood-win on the first click, making moves no-op.)
+ */
+function pocketGame(): Game {
+	const game = new Game();
+	game.loadRecord({
+		config: { width: 5, height: 5, bombs: 3 },
+		mines: ['1,0', '0,1', '1,1'],
+		moves: [{ type: 'reveal', index: { x: 4, y: 4 } }],
+	});
+	return game;
+}
+
 describe('Game', () => {
 	test('first reveal places bombs and starts the game', () => {
 		const game = new Game(PRESETS.beginner);
@@ -118,15 +134,9 @@ describe('Game', () => {
 
 	describe('undo/redo', () => {
 		test('undo reverts the last move, redo re-applies it', () => {
-			const game = new Game({ width: 5, height: 5, bombs: 3 });
-			game.reveal({ x: 2, y: 2 });
+			const game = pocketGame();
 
-			const hidden = game
-				.getState()
-				.board.cells.toArray()
-				.find((c) => c.state.type === 'hidden')!;
-
-			game.toggleFlag(hidden);
+			game.toggleFlag({ x: 0, y: 0 });
 			expect(game.getState().board.flagCount).toBe(1);
 			expect(game.getState().canUndo).toBe(true);
 
@@ -140,15 +150,9 @@ describe('Game', () => {
 		});
 
 		test('undo can recover from a loss', () => {
-			const game = new Game({ width: 5, height: 5, bombs: 3 });
-			game.reveal({ x: 2, y: 2 });
+			const game = pocketGame();
 
-			const bomb = game
-				.getState()
-				.board.cells.toArray()
-				.find((c) => c.isBomb && c.state.type === 'hidden')!;
-
-			game.reveal(bomb);
+			game.reveal({ x: 1, y: 0 });
 			expect(game.getState().status).toBe('lost');
 
 			game.undo();
@@ -157,16 +161,11 @@ describe('Game', () => {
 		});
 
 		test('a new move after undo discards the redo branch', () => {
-			const game = new Game({ width: 5, height: 5, bombs: 3 });
-			game.reveal({ x: 2, y: 2 });
-			const a = game
-				.getState()
-				.board.cells.toArray()
-				.filter((c) => c.state.type === 'hidden');
+			const game = pocketGame();
 
-			game.toggleFlag(a[0]);
+			game.toggleFlag({ x: 0, y: 0 });
 			game.undo();
-			game.toggleFlag(a[1]);
+			game.toggleFlag({ x: 1, y: 0 });
 
 			expect(game.getState().canRedo).toBe(false);
 		});
@@ -174,29 +173,18 @@ describe('Game', () => {
 
 	describe('undo memory', () => {
 		test('remembers the nature of undone reveals', () => {
-			const game = new Game({ width: 5, height: 5, bombs: 3 });
-			game.reveal({ x: 2, y: 2 });
+			const game = pocketGame();
 
-			const bomb = game
-				.getState()
-				.board.cells.toArray()
-				.find((c) => c.isBomb && c.state.type === 'hidden')!;
-
-			game.reveal(bomb);
+			game.reveal({ x: 1, y: 0 });
 			game.undo();
 
 			const memory = game.getState().memory;
-			expect(memory.get(Index2D.key(bomb))).toBe('mine');
+			expect(memory.get(Index2D.key({ x: 1, y: 0 }))).toBe('mine');
 		});
 
 		test('restart clears the memory', () => {
-			const game = new Game({ width: 5, height: 5, bombs: 3 });
-			game.reveal({ x: 2, y: 2 });
-			const bomb = game
-				.getState()
-				.board.cells.toArray()
-				.find((c) => c.isBomb)!;
-			game.reveal(bomb);
+			const game = pocketGame();
+			game.reveal({ x: 1, y: 0 });
 			game.undo();
 			expect(game.getState().memory.size).toBeGreaterThan(0);
 
