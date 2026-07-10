@@ -1,5 +1,5 @@
 import Index2D from './Index2D';
-import { Size2D } from './Size2D';
+import type { Size2D } from './Size2D';
 
 export interface Range2DLike extends Index2D, Size2D {}
 export default class Range2D implements Range2DLike {

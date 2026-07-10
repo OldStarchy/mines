@@ -1,9 +1,8 @@
 import { describe, expect, test } from 'vitest';
+import Action from './Action';
 import Board from './Board';
 import Cell from './Cell';
-import CellGroupConstraint from './CellGroupConstraint';
 import CellState from './CellState';
-import dump from './dump';
 
 describe('Board', () => {
 	describe('fromStringNotation', () => {
@@ -30,30 +29,72 @@ describe('Board', () => {
 		});
 	});
 
-	describe('generateConstraints', () => {
-		test('creates neighbor count constraints', () => {
-			const board = Board.fromStringNotation(['!__', '_  ', '_  ']);
+	describe('applyAction', () => {
+		test('reveal flood-fills through zero cells', () => {
+			const board = Board.fromStringNotation([
+				'____',
+				'____',
+				'____',
+				'___!',
+			]).applyAction(Action.reveal({ x: 0, y: 0 }));
 
-			const constraints = board.generateConstraints();
+			expect(board.cells.at({ x: 3, y: 3 }).state.type).toBe('hidden');
+			expect(board.cells.at({ x: 0, y: 0 }).state).toEqual(
+				CellState.revealed(0),
+			);
+			expect(board.cells.at({ x: 2, y: 2 }).state).toEqual(
+				CellState.revealed(1),
+			);
+		});
 
-			console.log(constraints.map(dump).join('\n'));
-			expect(constraints).toEqual([
-				new CellGroupConstraint(
-					new Cell(1, 1, CellState.hidden, true),
-					[
-						new Cell(0, 0, CellState.hidden, true),
-						new Cell(1, 0, CellState.hidden, false),
-						new Cell(2, 0, CellState.hidden, false),
-						new Cell(0, 1, CellState.hidden, false),
-						new Cell(2, 1, CellState.revealed(0), false),
-						new Cell(0, 2, CellState.hidden, false),
-						new Cell(1, 2, CellState.revealed(0), false),
-						new Cell(2, 2, CellState.revealed(0), false),
-					],
-					1,
-					1,
-				),
-			]);
+		test('revealing a bomb does not flood-fill its neighbors', () => {
+			const board = Board.fromStringNotation(['!__', '___']).applyAction(
+				Action.reveal({ x: 0, y: 0 }),
+			);
+
+			expect(board.cells.at({ x: 0, y: 0 }).state.type).toBe('revealed');
+			expect(board.cells.at({ x: 1, y: 0 }).state.type).toBe('hidden');
+			expect(board.isLost).toBe(true);
+		});
+
+		test('flag and unflag toggle a hidden cell', () => {
+			const index = { x: 1, y: 0 };
+			let board = Board.fromStringNotation(['!__', '___']);
+
+			board = board.applyAction(Action.flag(index));
+			expect(board.cells.at(index).state.type).toBe('flagged');
+
+			// Flagged cells cannot be revealed.
+			board = board.applyAction(Action.reveal(index));
+			expect(board.cells.at(index).state.type).toBe('flagged');
+
+			board = board.applyAction(Action.unflag(index));
+			expect(board.cells.at(index).state.type).toBe('hidden');
+		});
+
+		test('placeBombsAndReveal keeps the first click safe', () => {
+			const board = Board.ofSize(9, 9).applyAction(
+				Action.placeBombsAndReveal({ x: 4, y: 4 }, 10),
+			);
+
+			expect(board.bombCount).toBe(10);
+			expect(board.cells.at({ x: 4, y: 4 }).state.type).toBe('revealed');
+			expect(board.isLost).toBe(false);
+		});
+	});
+
+	describe('win/loss detection', () => {
+		test('isWon when all non-bomb cells revealed', () => {
+			let board = Board.fromStringNotation(['!_', '__']);
+			expect(board.isWon).toBe(false);
+
+			board = board
+				.applyAction(Action.reveal({ x: 1, y: 0 }))
+				.applyAction(Action.reveal({ x: 0, y: 1 }))
+				.applyAction(Action.reveal({ x: 1, y: 1 }));
+
+			expect(board.isWon).toBe(true);
+			expect(board.isLost).toBe(false);
 		});
 	});
 });

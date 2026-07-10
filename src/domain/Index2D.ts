@@ -18,6 +18,13 @@ const Index2D = {
 	addXy(a: Index2D, x: number, y: number) {
 		return Index2D.add(a, { x, y });
 	},
+	key({ x, y }: Index2D): string {
+		return `${x},${y}`;
+	},
+	fromKey(key: string): Index2D {
+		const [x, y] = key.split(',').map(Number);
+		return { x, y };
+	},
 } as const;
 
 export default Index2D;

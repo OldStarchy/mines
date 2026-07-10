@@ -46,7 +46,7 @@ export default class Cell {
 						return [this.state.number.toFixed(0)];
 					}
 					default: {
-						const _exhaustiveCheck: never = this.state;
+						this.state satisfies never;
 						throw null;
 					}
 				}
@@ -86,7 +86,7 @@ export default class Cell {
 				];
 
 			default: {
-				const _exhaustiveCheck: never = options;
+				options satisfies never;
 				throw null;
 			}
 		}

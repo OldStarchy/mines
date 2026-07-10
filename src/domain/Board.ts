@@ -1,8 +1,7 @@
 import Action from './Action';
 import Array2D from './Array2D';
 import Cell from './Cell';
-import CellGroupConstraint from './CellGroupConstraint';
-import CellState, { BombCount } from './CellState';
+import CellState, { type BombCount } from './CellState';
 import Index2D from './Index2D';
 import Range2D from './Range2D';
 
@@ -60,27 +59,6 @@ export default class Board {
 		);
 	}
 
-	createNeighborCountConstraint(index: Index2D): CellGroupConstraint | null {
-		const cell = this.cells.at(index);
-		if (cell.state.type == 'hidden') return null;
-		if (cell.state.type == 'flagged') return null;
-
-		const neighborRange = Range2D.around(index);
-		const cells = this.cells
-			.slice(neighborRange)
-			.toArray()
-			.filter((c) => c !== cell);
-
-		const flags = cells.filter((c) => c.state.type === 'flagged').length;
-
-		return new CellGroupConstraint(
-			this.cells.at(index),
-			cells,
-			cell.state.number - flags,
-			cell.state.number - flags,
-		);
-	}
-
 	applyAction(action: Action) {
 		let cells = this.cells.map((cell) => cell.with());
 
@@ -106,7 +84,7 @@ export default class Board {
 						.length as BombCount;
 					if (bombs > 8) throw new Error('Too many bombs');
 
-					if (bombs === 0) {
+					if (bombs === 0 && !cell.isBomb) {
 						queue.unshift(...neighborhood.map(Action.reveal));
 					}
 
@@ -126,6 +104,19 @@ export default class Board {
 					cells = cells.with(
 						index,
 						cell.with({ state: CellState.flagged }),
+					);
+					break;
+				}
+
+				case 'unflag': {
+					const { index } = action;
+					const cell = cells.at(index);
+
+					if (cell.state.type !== 'flagged') continue;
+
+					cells = cells.with(
+						index,
+						cell.with({ state: CellState.hidden }),
 					);
 					break;
 				}
@@ -164,7 +155,7 @@ export default class Board {
 					queue.push(Action.reveal(action.index));
 					break;
 				default:
-					const _exhaustiveCheck: never = action;
+					action satisfies never;
 			}
 		}
 
@@ -215,10 +206,29 @@ export default class Board {
 			.join('\n');
 	}
 
-	generateConstraints(): CellGroupConstraint[] {
+	get bombCount(): number {
+		return this.cells.toArray().filter((c) => c.isBomb).length;
+	}
+
+	get flagCount(): number {
+		return this.cells.toArray().filter((c) => c.state.type === 'flagged')
+			.length;
+	}
+
+	/** A bomb has been revealed. */
+	get isLost(): boolean {
 		return this.cells
-			.map((_, index) => this.createNeighborCountConstraint(index))
 			.toArray()
-			.filter((v) => v !== null);
+			.some((c) => c.isBomb && c.state.type === 'revealed');
+	}
+
+	/** Every non-bomb cell has been revealed (and no bomb has). */
+	get isWon(): boolean {
+		return (
+			!this.isLost &&
+			this.cells
+				.toArray()
+				.every((c) => c.isBomb || c.state.type === 'revealed')
+		);
 	}
 }

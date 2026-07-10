@@ -87,8 +87,7 @@ describe('Array2d', () => {
 
 				const fn = vitest.fn((_: Index2D) => {});
 
-				slice.forEach((value, index) => {
-					console.log(value);
+				slice.forEach((value) => {
 					fn(value);
 				});
 

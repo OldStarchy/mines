@@ -15,6 +15,9 @@ const Action = {
 	flag({ x, y }: Index2D) {
 		return { type: 'flag', index: { x, y } } as const;
 	},
+	unflag({ x, y }: Index2D) {
+		return { type: 'unflag', index: { x, y } } as const;
+	},
 } as const;
 type Action = StructEnum<typeof Action>;
 

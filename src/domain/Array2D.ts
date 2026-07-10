@@ -1,7 +1,7 @@
 import Index2D from './Index2D';
-import { Range2DLike } from './Range2D';
-import { Size2D } from './Size2D';
-import { Slice2D } from './Slice2D';
+import type { Range2DLike } from './Range2D';
+import type { Size2D } from './Size2D';
+import type { Slice2D } from './Slice2D';
 
 export default class Array2D<T> {
 	get width() {
@@ -93,7 +93,7 @@ export default class Array2D<T> {
 		return this.data[index1d];
 	}
 
-	slice(range: Range2DLike) {
+	slice(range: Range2DLike): Slice2D<T> {
 		let { x = 0, y = 0, width, height } = range;
 
 		if (x < 0) {
