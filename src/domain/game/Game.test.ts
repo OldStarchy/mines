@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'vitest';
+import Index2D from '../Index2D';
 import Game, { PRESETS } from './Game';
 
 describe('Game', () => {
@@ -113,5 +114,140 @@ describe('Game', () => {
 		expect(state.status).toBe('idle');
 		expect(state.config).toEqual(PRESETS.expert);
 		expect(state.board.bombCount).toBe(0);
+	});
+
+	describe('undo/redo', () => {
+		test('undo reverts the last move, redo re-applies it', () => {
+			const game = new Game({ width: 5, height: 5, bombs: 3 });
+			game.reveal({ x: 2, y: 2 });
+
+			const hidden = game
+				.getState()
+				.board.cells.toArray()
+				.find((c) => c.state.type === 'hidden')!;
+
+			game.toggleFlag(hidden);
+			expect(game.getState().board.flagCount).toBe(1);
+			expect(game.getState().canUndo).toBe(true);
+
+			game.undo();
+			expect(game.getState().board.flagCount).toBe(0);
+			expect(game.getState().canRedo).toBe(true);
+
+			game.redo();
+			expect(game.getState().board.flagCount).toBe(1);
+			expect(game.getState().canRedo).toBe(false);
+		});
+
+		test('undo can recover from a loss', () => {
+			const game = new Game({ width: 5, height: 5, bombs: 3 });
+			game.reveal({ x: 2, y: 2 });
+
+			const bomb = game
+				.getState()
+				.board.cells.toArray()
+				.find((c) => c.isBomb && c.state.type === 'hidden')!;
+
+			game.reveal(bomb);
+			expect(game.getState().status).toBe('lost');
+
+			game.undo();
+			expect(game.getState().status).toBe('playing');
+			expect(game.getState().endedAt).toBeNull();
+		});
+
+		test('a new move after undo discards the redo branch', () => {
+			const game = new Game({ width: 5, height: 5, bombs: 3 });
+			game.reveal({ x: 2, y: 2 });
+			const a = game
+				.getState()
+				.board.cells.toArray()
+				.filter((c) => c.state.type === 'hidden');
+
+			game.toggleFlag(a[0]);
+			game.undo();
+			game.toggleFlag(a[1]);
+
+			expect(game.getState().canRedo).toBe(false);
+		});
+	});
+
+	describe('undo memory', () => {
+		test('remembers the nature of undone reveals', () => {
+			const game = new Game({ width: 5, height: 5, bombs: 3 });
+			game.reveal({ x: 2, y: 2 });
+
+			const bomb = game
+				.getState()
+				.board.cells.toArray()
+				.find((c) => c.isBomb && c.state.type === 'hidden')!;
+
+			game.reveal(bomb);
+			game.undo();
+
+			const memory = game.getState().memory;
+			expect(memory.get(Index2D.key(bomb))).toBe('mine');
+		});
+
+		test('restart clears the memory', () => {
+			const game = new Game({ width: 5, height: 5, bombs: 3 });
+			game.reveal({ x: 2, y: 2 });
+			const bomb = game
+				.getState()
+				.board.cells.toArray()
+				.find((c) => c.isBomb)!;
+			game.reveal(bomb);
+			game.undo();
+			expect(game.getState().memory.size).toBeGreaterThan(0);
+
+			game.restart();
+			expect(game.getState().memory.size).toBe(0);
+		});
+	});
+
+	describe('chord', () => {
+		test('an unsatisfied chord is not recorded as a move', () => {
+			const game = new Game({ width: 6, height: 6, bombs: 6 });
+			game.reveal({ x: 0, y: 0 });
+
+			const number = game
+				.getState()
+				.board.cells.toArray()
+				.find(
+					(c) => c.state.type === 'revealed' && !c.isBomb,
+				)!;
+
+			const before = game.getState().moveCount;
+			game.chord(number); // no flags placed → satisfied? only if 0
+			// A number cell with no flags is only satisfied if it is a 0,
+			// which has no hidden neighbors, so nothing is revealed.
+			expect(game.getState().moveCount).toBe(before);
+		});
+
+		test('a chord that reveals safe cells is one undoable move', () => {
+			// Deterministic 3x3: bomb at (1,0), the 1 at (0,0) revealed
+			// without flooding, so (0,1) and (1,1) stay hidden and safe.
+			const game = new Game();
+			game.loadRecord({
+				config: { width: 3, height: 3, bombs: 1 },
+				mines: ['1,0'],
+				moves: [{ type: 'reveal', index: { x: 0, y: 0 } }],
+			});
+			game.toggleFlag({ x: 1, y: 0 });
+
+			const before = game.getState().moveCount;
+			game.chord({ x: 0, y: 0 });
+
+			expect(game.getState().moveCount).toBe(before + 1);
+			expect(game.getState().board.cells.at({ x: 0, y: 1 }).state.type).toBe(
+				'revealed',
+			);
+
+			game.undo();
+			expect(game.getState().moveCount).toBe(before);
+			expect(game.getState().board.cells.at({ x: 0, y: 1 }).state.type).toBe(
+				'hidden',
+			);
+		});
 	});
 });
