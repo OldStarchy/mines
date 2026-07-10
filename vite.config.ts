@@ -25,6 +25,9 @@ export default defineConfig({
 						headless: true,
 						provider: playwright(),
 						instances: [{ browser: 'chromium' }],
+						// Keep __screenshots__ for committed visual refs only;
+						// failure diffs still land in .vitest-attachments.
+						screenshotFailures: false,
 					},
 				},
 			},
