@@ -4,6 +4,16 @@ import { render } from 'vitest-browser-react';
 import App from './App';
 
 describe('App', () => {
+	test('visual: idle app layout', async () => {
+		document.documentElement.dataset.theme = 'classic';
+		render(<App />);
+
+		await expect.element(page.getByText('Mines Lab')).toBeVisible();
+		const app = page.elementLocator(document.querySelector('.app')!);
+
+		await expect(app).toMatchScreenshot('app-idle');
+	});
+
 	test('plays a game: reveal, flag, assistant toggle', async () => {
 		render(<App />);
 
