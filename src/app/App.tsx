@@ -6,12 +6,14 @@ import { configKey } from '../domain/game/scenario';
 import solve from '../domain/solver/Solver';
 import AssistantPanel from './components/AssistantPanel';
 import BoardView from './components/BoardView';
+import ReplayControls from './components/ReplayControls';
 import ResumeDialog from './components/ResumeDialog';
 import Toolbar from './components/Toolbar';
 import type { Highlight } from './highlight';
 import { hasSave, loadGame, loadLastConfig } from './persistence';
 import { applyTheme, loadTheme, type ThemeName } from './theme';
 import useGame from './useGame';
+import useReplay from './useReplay';
 import './styles.css';
 
 export default function App() {
@@ -26,6 +28,7 @@ export default function App() {
 	const [highlight, setHighlight] = useState<Highlight | null>(null);
 	/** Scenario awaiting a resume-or-new decision (has a saved game). */
 	const [pendingConfig, setPendingConfig] = useState<GameConfig | null>(null);
+	const replay = useReplay();
 
 	useEffect(() => applyTheme(theme), [theme]);
 
@@ -109,36 +112,67 @@ export default function App() {
 
 			<main className="main">
 				<div className="board-area">
-					<BoardView
-						board={state.board}
-						status={state.status}
-						lastReveal={state.lastReveal}
-						highlight={highlight}
-						onReveal={reveal}
-						onChord={chord}
-						onToggleFlag={toggleFlag}
-					/>
-					{state.status === 'won' && (
-						<p className="banner banner-won">Cleared! 🎉</p>
-					)}
-					{state.status === 'lost' && (
-						<p className="banner banner-lost">
-							Boom. Undo the move or press the face to try again.
-						</p>
+					{replay.view ? (
+						<>
+							<BoardView
+								board={replay.view.board}
+								status={replay.view.status}
+								lastReveal={replay.view.lastReveal}
+								highlight={null}
+								interactive={false}
+								waveScale={Math.min(1, 1 / replay.view.aps)}
+							/>
+							<ReplayControls replay={replay} />
+						</>
+					) : (
+						<>
+							<BoardView
+								board={state.board}
+								status={state.status}
+								lastReveal={state.lastReveal}
+								highlight={highlight}
+								onReveal={reveal}
+								onChord={chord}
+								onToggleFlag={toggleFlag}
+							/>
+							{state.status === 'won' && (
+								<p className="banner banner-won">Cleared! 🎉</p>
+							)}
+							{state.status === 'lost' && (
+								<p className="banner banner-lost">
+									Boom. Undo the move or press the face to try
+									again.
+								</p>
+							)}
+							{state.moveCount > 0 && (
+								<button
+									type="button"
+									className="button"
+									onClick={() => {
+										setHighlight(null);
+										replay.start(game.getRecord());
+									}}
+								>
+									▶ Replay
+								</button>
+							)}
+						</>
 					)}
 				</div>
 
-				<AssistantPanel
-					enabled={assist}
-					onEnabledChange={setAssist}
-					metaAssist={metaAssist}
-					onMetaAssistChange={setMetaAssist}
-					memorySize={state.memory.size}
-					result={result}
-					idle={state.status === 'idle'}
-					onHighlight={setHighlight}
-					onApplyCells={applyCells}
-				/>
+				{!replay.view && (
+					<AssistantPanel
+						enabled={assist}
+						onEnabledChange={setAssist}
+						metaAssist={metaAssist}
+						onMetaAssistChange={setMetaAssist}
+						memorySize={state.memory.size}
+						result={result}
+						idle={state.status === 'idle'}
+						onHighlight={setHighlight}
+						onApplyCells={applyCells}
+					/>
+				)}
 			</main>
 		</div>
 	);

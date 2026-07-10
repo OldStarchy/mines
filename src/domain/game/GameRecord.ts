@@ -1,6 +1,6 @@
 import Action from '../Action';
 import Board from '../Board';
-import type Index2D from '../Index2D';
+import Index2D from '../Index2D';
 import type { GameConfig } from './Game';
 
 /** A single semantic move a player can make. One move = one replay tick. */
@@ -62,6 +62,19 @@ export function boardsForRecord(record: GameRecord): Board[] {
 		boards.push(board);
 	}
 	return boards;
+}
+
+/** Keys of the cells revealed by the step from `prev` to `next`. */
+export function revealedDiff(prev: Board, next: Board): string[] {
+	const before = prev.cells.toArray();
+	return next.cells
+		.toArray()
+		.filter(
+			(cell, i) =>
+				cell.state.type === 'revealed' &&
+				before[i].state.type !== 'revealed',
+		)
+		.map(Index2D.key);
 }
 
 const CURRENT_VERSION = 1;

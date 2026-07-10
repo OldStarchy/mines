@@ -4,6 +4,7 @@ import Index2D from '../Index2D';
 import {
 	baseBoard,
 	boardsForRecord,
+	revealedDiff,
 	type GameRecord,
 	type Move,
 } from './GameRecord';
@@ -108,18 +109,6 @@ export default class Game {
 		return 'playing';
 	}
 
-	private static revealedDiff(prev: Board, next: Board): string[] {
-		const before = prev.cells.toArray();
-		return next.cells
-			.toArray()
-			.filter(
-				(cell, i) =>
-					cell.state.type === 'revealed' &&
-					before[i].state.type !== 'revealed',
-			)
-			.map(Index2D.key);
-	}
-
 	private buildState(): GameState {
 		const board = this.currentBoard();
 		const status = this.deriveStatus(board);
@@ -200,7 +189,7 @@ export default class Game {
 		this.lastReveal = revealedFrom
 			? {
 					origin: move.index,
-					revealed: Game.revealedDiff(revealedFrom, next),
+					revealed: revealedDiff(revealedFrom, next),
 				}
 			: null;
 		this.commit();
@@ -247,7 +236,7 @@ export default class Game {
 
 		const next = board.applyAction(Action.chord(index));
 		// A chord on an unsatisfied number reveals nothing; don't record it.
-		if (Game.revealedDiff(board, next).length === 0) return;
+		if (revealedDiff(board, next).length === 0) return;
 
 		this.pushMove({ type: 'chord', index }, next, board);
 	}
@@ -285,7 +274,7 @@ export default class Game {
 		// The player saw whatever that move revealed; remember it.
 		if (move.type === 'reveal' || move.type === 'chord') {
 			const previous = this.currentBoard();
-			for (const key of Game.revealedDiff(previous, undoneBoard)) {
+			for (const key of revealedDiff(previous, undoneBoard)) {
 				const cell = undoneBoard.cells.at(Index2D.fromKey(key));
 				this.memory.set(key, cell.isBomb ? 'mine' : 'safe');
 			}
@@ -312,7 +301,7 @@ export default class Game {
 			move.type === 'reveal' || move.type === 'chord'
 				? {
 						origin: move.index,
-						revealed: Game.revealedDiff(board, next),
+						revealed: revealedDiff(board, next),
 					}
 				: null;
 		this.commit();
