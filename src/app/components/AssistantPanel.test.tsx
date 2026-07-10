@@ -4,6 +4,7 @@ import { render } from 'vitest-browser-react';
 import Board from '../../domain/Board';
 import solve from '../../domain/solver/Solver';
 import AssistantPanel from './AssistantPanel';
+import '../styles.css';
 
 function renderPanel(board: Board) {
 	const onApplyCells = vi.fn();
@@ -11,6 +12,9 @@ function renderPanel(board: Board) {
 		<AssistantPanel
 			enabled
 			onEnabledChange={() => {}}
+			metaAssist={false}
+			onMetaAssistChange={() => {}}
+			memorySize={0}
 			result={solve(board)}
 			idle={false}
 			onHighlight={() => {}}
@@ -72,6 +76,33 @@ describe('AssistantPanel', () => {
 			{ x: 2, y: 0 },
 		]);
 		expect(onApplyCells).toHaveBeenCalledWith('reveal', [{ x: 1, y: 0 }]);
+	});
+
+	test('alternative proofs are collapsed behind an expando', async () => {
+		renderPanel(Board.fromStringNotation(['!_!', '   ']));
+
+		// (0,0) is provable more than one way; the simplest proof shows
+		// first and the rest hide behind a toggle.
+		await page.getByText('🚩 Flag (0,0)').click();
+		const toggle = page.getByText('way to prove this', { exact: false });
+		await expect.element(toggle).toBeVisible();
+
+		await expect
+			.element(page.getByText('Proof 2', { exact: true }))
+			.not.toBeInTheDocument();
+
+		await toggle.click();
+		await expect
+			.element(page.getByText('Proof 2', { exact: true }))
+			.toBeVisible();
+	});
+
+	test('undo memory is a visible, off-by-default opt-in', async () => {
+		renderPanel(Board.fromStringNotation(['!_!', '   ']));
+
+		const meta = page.getByLabelText('Use undo memory');
+		await expect.element(meta).toBeVisible();
+		await expect.element(meta).not.toBeChecked();
 	});
 
 	test('warns when flags are contradictory', async () => {

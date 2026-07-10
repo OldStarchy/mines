@@ -21,6 +21,8 @@ export default function App() {
 	const { game, state } = useGame(initialConfig);
 	const [theme, setTheme] = useState<ThemeName>(loadTheme);
 	const [assist, setAssist] = useState(false);
+	/** Off by default: reasoning from undone reveals is meta-gaming. */
+	const [metaAssist, setMetaAssist] = useState(false);
 	const [highlight, setHighlight] = useState<Highlight | null>(null);
 	/** Scenario awaiting a resume-or-new decision (has a saved game). */
 	const [pendingConfig, setPendingConfig] = useState<GameConfig | null>(null);
@@ -30,9 +32,19 @@ export default function App() {
 	const result = useMemo(
 		() =>
 			assist && state.status === 'playing'
-				? solve(state.board, { totalMines: state.config.bombs })
+				? solve(state.board, {
+						totalMines: state.config.bombs,
+						memory: metaAssist ? state.memory : undefined,
+					})
 				: null,
-		[assist, state.status, state.board, state.config.bombs],
+		[
+			assist,
+			metaAssist,
+			state.status,
+			state.board,
+			state.config.bombs,
+			state.memory,
+		],
 	);
 
 	const act = (action: () => void) => {
@@ -119,6 +131,9 @@ export default function App() {
 				<AssistantPanel
 					enabled={assist}
 					onEnabledChange={setAssist}
+					metaAssist={metaAssist}
+					onMetaAssistChange={setMetaAssist}
+					memorySize={state.memory.size}
 					result={result}
 					idle={state.status === 'idle'}
 					onHighlight={setHighlight}

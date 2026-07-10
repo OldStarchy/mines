@@ -167,8 +167,15 @@ describe('solve', () => {
 
 	describe('proof ranking', () => {
 		test('the primary proof is never more complex than its alternatives', () => {
-			const board = Board.fromStringNotation(['_!_!', 'F  F', '    ']);
-			for (const inference of solve(board).inferences) {
+			const board = Board.fromStringNotation(['!_!', '   ']);
+			const inferences = solve(board).inferences;
+
+			// The fixture must actually exercise multi-proof ranking.
+			expect(
+				inferences.some((i) => i.alternatives.length > 0),
+			).toBe(true);
+
+			for (const inference of inferences) {
 				for (const alt of inference.alternatives) {
 					expect(inference.constraint.stepCount).toBeLessThanOrEqual(
 						alt.stepCount,
