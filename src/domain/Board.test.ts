@@ -113,7 +113,29 @@ describe('Board', () => {
 			expect(board.cells.at({ x: 1, y: 1 }).state.type).toBe('flagged');
 		});
 
-		test('does nothing when the number is not satisfied by flags', () => {
+		test('flags hidden neighbors when they must all be mines', () => {
+			// The 1 at (0,0) has a single hidden neighbor: the mine.
+			const board = Board.fromStringNotation([' !']).applyAction(
+				Action.chord({ x: 0, y: 0 }),
+			);
+
+			expect(board.cells.at({ x: 1, y: 0 }).state.type).toBe('flagged');
+		});
+
+		test('auto-flagging counts flags already placed', () => {
+			// The 2 at (0,1) touches one flag and one hidden cell — the
+			// hidden cell must hold the remaining mine.
+			const board = Board.fromStringNotation(['F!', '  ']).applyAction(
+				Action.chord({ x: 0, y: 1 }),
+			);
+
+			expect(board.cells.at({ x: 1, y: 0 }).state.type).toBe('flagged');
+			expect(board.isLost).toBe(false);
+		});
+
+		test('does nothing when the number is neither satisfied nor forced', () => {
+			// The 1 at (0,0) has three hidden neighbors and no flags:
+			// nothing to reveal, nothing that must be a mine.
 			const before = Board.fromStringNotation([' __', '_!_', '___']);
 			const after = before.applyAction(Action.chord({ x: 0, y: 0 }));
 

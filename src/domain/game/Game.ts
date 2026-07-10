@@ -235,10 +235,12 @@ export default class Game {
 		if (this.deriveStatus(board) !== 'playing') return;
 
 		const next = board.applyAction(Action.chord(index));
-		// A chord on an unsatisfied number reveals nothing; don't record it.
-		if (revealedDiff(board, next).length === 0) return;
+		const revealed = revealedDiff(board, next).length > 0;
+		const flagged = next.flagCount !== board.flagCount;
+		// A chord that neither reveals nor flags anything isn't a move.
+		if (!revealed && !flagged) return;
 
-		this.pushMove({ type: 'chord', index }, next, board);
+		this.pushMove({ type: 'chord', index }, next, revealed ? board : null);
 	}
 
 	toggleFlag(at: Index2D) {

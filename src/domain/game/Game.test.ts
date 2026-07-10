@@ -194,22 +194,33 @@ describe('Game', () => {
 	});
 
 	describe('chord', () => {
-		test('an unsatisfied chord is not recorded as a move', () => {
-			const game = new Game({ width: 6, height: 6, bombs: 6 });
-			game.reveal({ x: 0, y: 0 });
-
-			const number = game
-				.getState()
-				.board.cells.toArray()
-				.find(
-					(c) => c.state.type === 'revealed' && !c.isBomb,
-				)!;
+		test('a chord that changes nothing is not recorded as a move', () => {
+			// The 1 at (0,0) has three hidden neighbors and no flags:
+			// not satisfied, and the hidden cells are not all mines.
+			const game = new Game();
+			game.loadRecord({
+				config: { width: 3, height: 3, bombs: 1 },
+				mines: ['1,0'],
+				moves: [{ type: 'reveal', index: { x: 0, y: 0 } }],
+			});
 
 			const before = game.getState().moveCount;
-			game.chord(number); // no flags placed → satisfied? only if 0
-			// A number cell with no flags is only satisfied if it is a 0,
-			// which has no hidden neighbors, so nothing is revealed.
+			game.chord({ x: 0, y: 0 });
 			expect(game.getState().moveCount).toBe(before);
+		});
+
+		test('a chord that flags forced mines is one undoable move', () => {
+			const game = pocketGame();
+
+			// The 2 at (2,0) touches exactly two hidden cells: both bombs.
+			game.chord({ x: 2, y: 0 });
+
+			expect(game.getState().board.flagCount).toBe(2);
+			expect(game.getState().moveCount).toBe(2);
+			expect(game.getState().lastReveal).toBeNull();
+
+			game.undo();
+			expect(game.getState().board.flagCount).toBe(0);
 		});
 
 		test('a chord that reveals safe cells is one undoable move', () => {

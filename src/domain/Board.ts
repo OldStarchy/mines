@@ -162,15 +162,18 @@ export default class Board {
 					const flags = neighborhood.filter(
 						(c) => c.state.type === 'flagged',
 					).length;
-
-					// Only chord a satisfied number.
-					if (flags !== cell.state.number) continue;
-
-					queue.unshift(
-						...neighborhood
-							.filter((c) => c.state.type === 'hidden')
-							.map(Action.reveal),
+					const hidden = neighborhood.filter(
+						(c) => c.state.type === 'hidden',
 					);
+
+					// A satisfied number reveals its hidden neighbors; a
+					// number whose hidden neighbors are exactly its missing
+					// mines flags them all instead.
+					if (flags === cell.state.number) {
+						queue.unshift(...hidden.map(Action.reveal));
+					} else if (flags + hidden.length === cell.state.number) {
+						queue.unshift(...hidden.map(Action.flag));
+					}
 					break;
 				}
 
