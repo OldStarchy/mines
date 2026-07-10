@@ -61,6 +61,7 @@ export default function App() {
 					<BoardView
 						board={state.board}
 						status={state.status}
+						lastReveal={state.lastReveal}
 						highlight={highlight}
 						onReveal={reveal}
 						onToggleFlag={toggleFlag}

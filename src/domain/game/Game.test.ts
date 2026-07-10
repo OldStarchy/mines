@@ -87,6 +87,22 @@ describe('Game', () => {
 		expect(game.getState().endedAt).not.toBeNull();
 	});
 
+	test('tracks the last reveal for flood-fill animation', () => {
+		const game = new Game(PRESETS.beginner);
+		expect(game.getState().lastReveal).toBeNull();
+
+		game.reveal({ x: 4, y: 4 });
+
+		const lastReveal = game.getState().lastReveal!;
+		expect(lastReveal.origin).toEqual({ x: 4, y: 4 });
+		// First click reveals at least its own flood-filled region.
+		expect(lastReveal.revealed).toContain('4,4');
+		expect(lastReveal.revealed.length).toBeGreaterThanOrEqual(9);
+
+		game.restart();
+		expect(game.getState().lastReveal).toBeNull();
+	});
+
 	test('restart returns to idle with the new config', () => {
 		const game = new Game(PRESETS.beginner);
 		game.reveal({ x: 0, y: 0 });

@@ -185,6 +185,7 @@ body {
 
 .board {
 	display: grid;
+	width: fit-content;
 	gap: 2px;
 	padding: 8px;
 	background: var(--surface);
@@ -231,6 +232,45 @@ body {
 .board[data-status='won'] .cell,
 .board[data-status='lost'] .cell {
 	cursor: default;
+}
+
+/* flood-fill wave: newly revealed cells pop in, delayed by distance */
+@keyframes cell-pop {
+	from {
+		transform: scale(0.5);
+		opacity: 0.1;
+	}
+	60% {
+		transform: scale(1.12);
+		opacity: 1;
+	}
+	to {
+		transform: scale(1);
+	}
+}
+
+.cell-revealed.cell-pop {
+	animation: cell-pop 240ms ease-out both;
+}
+
+@keyframes flag-pop {
+	from {
+		transform: scale(1.6) rotate(-14deg);
+	}
+	to {
+		transform: scale(1) rotate(0deg);
+	}
+}
+
+.cell-flagged {
+	animation: flag-pop 160ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.cell-revealed.cell-pop,
+	.cell-flagged {
+		animation: none;
+	}
 }
 
 .n1 { color: var(--n1); }

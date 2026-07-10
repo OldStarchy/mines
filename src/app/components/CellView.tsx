@@ -24,12 +24,14 @@ function CellView({
 	cell,
 	status,
 	highlight,
+	revealDelay,
 	onReveal,
 	onToggleFlag,
 }: {
 	cell: Cell;
 	status: GameStatus;
 	highlight: HighlightRole | undefined;
+	revealDelay: number | undefined;
 	onReveal: (cell: Cell) => void;
 	onToggleFlag: (cell: Cell) => void;
 }) {
@@ -41,12 +43,17 @@ function CellView({
 	if (cell.state.type === 'revealed' && !cell.isBomb && cell.state.number > 0)
 		classes.push(`n${cell.state.number}`);
 	if (cell.state.type === 'revealed' && cell.isBomb) classes.push('cell-hit');
+	if (cell.state.type === 'flagged') classes.push('cell-flagged');
+	if (revealDelay !== undefined) classes.push('cell-pop');
 	if (highlight) classes.push(`hl-${highlight}`);
 
 	return (
 		<button
 			type="button"
 			className={classes.join(' ')}
+			style={
+				revealDelay ? { animationDelay: `${revealDelay}ms` } : undefined
+			}
 			data-cell={`${cell.x},${cell.y}`}
 			onClick={() => onReveal(cell)}
 			onContextMenu={(event) => {

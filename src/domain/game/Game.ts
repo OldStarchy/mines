@@ -1,6 +1,6 @@
 import Action from '../Action';
 import Board from '../Board';
-import type Index2D from '../Index2D';
+import Index2D from '../Index2D';
 
 export interface GameConfig {
 	readonly width: number;
@@ -24,6 +24,14 @@ export interface GameState {
 	readonly status: GameStatus;
 	readonly startedAt: number | null;
 	readonly endedAt: number | null;
+	/**
+	 * Cells newly revealed by the latest reveal, with its origin —
+	 * lets the UI animate flood-fills as a wave from the click.
+	 */
+	readonly lastReveal: {
+		readonly origin: Index2D;
+		readonly revealed: readonly string[];
+	} | null;
 }
 
 /**
@@ -56,7 +64,20 @@ export default class Game {
 			status: 'idle',
 			startedAt: null,
 			endedAt: null,
+			lastReveal: null,
 		};
+	}
+
+	private static revealedDiff(prev: Board, next: Board): string[] {
+		const before = prev.cells.toArray();
+		return next.cells
+			.toArray()
+			.filter(
+				(cell, i) =>
+					cell.state.type === 'revealed' &&
+					before[i].state.type !== 'revealed',
+			)
+			.map(Index2D.key);
 	}
 
 	getState(): GameState {
@@ -105,6 +126,10 @@ export default class Game {
 				board: next,
 				status: 'playing',
 				startedAt: Date.now(),
+				lastReveal: {
+					origin: index,
+					revealed: Game.revealedDiff(board, next),
+				},
 			});
 			this.settle();
 			return;
@@ -113,7 +138,15 @@ export default class Game {
 		const cell = board.cells.atOrNull(index);
 		if (!cell || cell.state.type !== 'hidden') return;
 
-		this.setState({ ...this.state, board: board.applyAction(Action.reveal(index)) });
+		const next = board.applyAction(Action.reveal(index));
+		this.setState({
+			...this.state,
+			board: next,
+			lastReveal: {
+				origin: index,
+				revealed: Game.revealedDiff(board, next),
+			},
+		});
 		this.settle();
 	}
 
