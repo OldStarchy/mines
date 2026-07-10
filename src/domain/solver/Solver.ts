@@ -28,6 +28,18 @@ export interface SolveOptions {
 	maxDepth?: number;
 	/** Hard cap on total constraints, guards against pathological boards. */
 	maxConstraints?: number;
+	/**
+	 * Total mine count as shown on the mine counter. When given, the
+	 * remaining count (total − flags) constrains the set of all hidden
+	 * cells — the late-game "counter" rule.
+	 */
+	totalMines?: number;
+	/**
+	 * The counter rule only kicks in once the hidden region is this
+	 * small: earlier it derives sprawling constraints that explain
+	 * nothing, and endgames are where the counter decides anything.
+	 */
+	mineCountCellLimit?: number;
 }
 
 export function inferenceToAction(inference: Inference): Action {
@@ -58,7 +70,12 @@ export function inferenceToAction(inference: Inference): Action {
  */
 export default function solve(
 	board: Board,
-	{ maxDepth = 4, maxConstraints = 2000 }: SolveOptions = {},
+	{
+		maxDepth = 4,
+		maxConstraints = 2000,
+		totalMines,
+		mineCountCellLimit = 24,
+	}: SolveOptions = {},
 ): SolveResult {
 	/** Tightest known constraint per cell set. */
 	const bySet = new Map<string, Constraint>();
@@ -162,6 +179,26 @@ export default function solve(
 			},
 			0,
 		);
+	}
+
+	// The mine counter itself is a constraint over everything hidden.
+	if (totalMines !== undefined) {
+		const allCells = board.cells.toArray();
+		const hidden = allCells.filter((c) => c.state.type === 'hidden');
+		const flags = allCells.filter(
+			(c) => c.state.type === 'flagged',
+		).length;
+		const remaining = totalMines - flags;
+
+		if (hidden.length > 0 && hidden.length <= mineCountCellLimit) {
+			add(
+				hidden.map(Index2D.key),
+				remaining,
+				remaining,
+				{ type: 'mineCount', totalMines, flags },
+				0,
+			);
+		}
 	}
 
 	// Fixpoint: combine each new constraint with every overlapping one.

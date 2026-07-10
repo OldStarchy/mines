@@ -70,6 +70,52 @@ describe('solve', () => {
 		expect(conclusion.toLowerCase()).toContain('flag');
 	});
 
+	describe('mine counter rule', () => {
+		test('all remaining mines flagged: leftover hidden tiles are safe', () => {
+			// Two hidden tiles no number can see; the only mine is flagged.
+			const board = Board.fromStringNotation(['__F  ']);
+
+			expect(solve(board).inferences).toEqual([]);
+			expect(
+				solve(board, { totalMines: 1 })
+					.inferences.map((i) => `${i.type} ${i.cell.x},${i.cell.y}`)
+					.sort(),
+			).toEqual(['reveal 0,0', 'reveal 1,0']);
+		});
+
+		test('disambiguates local configurations by remaining count', () => {
+			// The 1 at (2,0) allows a mine on (1,0) or (3,0) — two valid
+			// configurations. Either way the single remaining mine is
+			// spent, so the unconstrained (0,0) must be safe.
+			const board = Board.fromStringNotation(['_! _']);
+
+			expect(solve(board).inferences).toEqual([]);
+			expect(
+				solve(board, { totalMines: 1 })
+					.inferences.map((i) => `${i.type} ${i.cell.x},${i.cell.y}`)
+					.sort(),
+			).toEqual(['reveal 0,0']);
+		});
+
+		test('stays out of the early game', () => {
+			// 25 hidden cells exceed the default cell limit.
+			const board = Board.fromStringNotation([
+				'_____',
+				'_____',
+				'_____',
+				'_____',
+				'____!',
+			]);
+
+			const result = solve(board, { totalMines: 1 });
+			expect(
+				result.constraints.every(
+					(c) => c.origin.type !== 'mineCount',
+				),
+			).toBe(true);
+		});
+	});
+
 	test('marks contradictions when flags cannot be right', () => {
 		// (0,1) shows 1 but touches two flags: one flag must be wrong.
 		const board = Board.fromStringNotation(['Ff', '  ']);

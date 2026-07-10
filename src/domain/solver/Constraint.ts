@@ -16,6 +16,12 @@ export type ConstraintOrigin =
 			readonly flags: number;
 	  }
 	| {
+			/** The mine counter: total mines minus flags, over all hidden cells. */
+			readonly type: 'mineCount';
+			readonly totalMines: number;
+			readonly flags: number;
+	  }
+	| {
 			/** part ⊆ whole, so (whole \ part) is also constrained. */
 			readonly type: 'subset';
 			readonly whole: Constraint;

@@ -21,6 +21,7 @@ export interface Explanation {
 }
 
 function listCells(cells: readonly string[]): string {
+	if (cells.length > 6) return `the ${cells.length} tiles around there`;
 	return cells.map((key) => `(${key})`).join(', ');
 }
 
@@ -51,6 +52,14 @@ export function describeConstraint(constraint: Constraint): string {
 					: '';
 			return `The ${origin.number} at ${at} needs ${mines(origin.number)}${flags}, so its hidden neighbors ${cells} hold ${bounds}.`;
 		}
+		case 'mineCount': {
+			const remaining = origin.totalMines - origin.flags;
+			const flags =
+				origin.flags > 0
+					? ` (${origin.totalMines} total minus ${origin.flags} flagged)`
+					: '';
+			return `The mine counter says ${mines(remaining)} remain${flags}, and ${cells} are the only hidden tiles left — so they hold ${bounds}.`;
+		}
 		case 'subset':
 			return `Setting aside ${listCells(origin.part.cells)} (${describeBounds(origin.part)}) from the group of ${listCells(origin.whole.cells)} (${describeBounds(origin.whole)}) leaves ${bounds} in ${cells}.`;
 		case 'intersection':
@@ -64,6 +73,7 @@ function parents(constraint: Constraint): Constraint[] {
 	const origin = constraint.origin;
 	switch (origin.type) {
 		case 'number':
+		case 'mineCount':
 			return [];
 		case 'subset':
 			return [origin.part, origin.whole];

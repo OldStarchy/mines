@@ -19,8 +19,11 @@ export default function App() {
 	useEffect(() => applyTheme(theme), [theme]);
 
 	const result = useMemo(
-		() => (assist && state.status === 'playing' ? solve(state.board) : null),
-		[assist, state.status, state.board],
+		() =>
+			assist && state.status === 'playing'
+				? solve(state.board, { totalMines: state.config.bombs })
+				: null,
+		[assist, state.status, state.board, state.config.bombs],
 	);
 
 	const reveal = (cell: Cell) => {
