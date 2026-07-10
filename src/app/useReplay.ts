@@ -4,6 +4,8 @@ import type { GameState, GameStatus } from '../domain/game/Game';
 import {
 	baseBoard,
 	boardsForRecord,
+	moveOrigin,
+	moveReveals,
 	revealedDiff,
 	type GameRecord,
 } from '../domain/game/GameRecord';
@@ -68,9 +70,9 @@ export default function useReplay(): Replay {
 		const board = boards[moveIndex];
 		const move = moveIndex > 0 ? record.moves[moveIndex - 1] : null;
 		const lastReveal =
-			move && (move.type === 'reveal' || move.type === 'chord')
+			move && moveReveals(move)
 				? {
-						origin: move.index,
+						origin: moveOrigin(move),
 						revealed: revealedDiff(boards[moveIndex - 1], board),
 					}
 				: null;

@@ -4,12 +4,20 @@ import Index2D from '../Index2D';
 import type { GameConfig } from './Game';
 
 /** A single semantic move a player can make. One move = one replay tick. */
-export type MoveType = 'reveal' | 'chord' | 'flag' | 'unflag';
+export type SingleMoveType = 'reveal' | 'chord' | 'flag' | 'unflag';
 
-export interface Move {
-	readonly type: MoveType;
-	readonly index: Index2D;
-}
+export type Move =
+	| { readonly type: SingleMoveType; readonly index: Index2D }
+	| {
+			/**
+			 * Several proven actions applied together — the assistant's
+			 * multi-cell suggestions land as one move, chord-style: one
+			 * undo step, one replay tick.
+			 */
+			readonly type: 'batch';
+			readonly action: 'flag' | 'reveal';
+			readonly indices: readonly Index2D[];
+	  };
 
 /**
  * A complete, serializable game: its configuration, the fixed mine
@@ -38,7 +46,28 @@ export function applyMove(board: Board, move: Move): Board {
 			return board.applyAction(Action.flag(move.index));
 		case 'unflag':
 			return board.applyAction(Action.unflag(move.index));
+		case 'batch':
+			return move.indices.reduce(
+				(b, index) =>
+					b.applyAction(
+						move.action === 'flag'
+							? Action.flag(index)
+							: Action.reveal(index),
+					),
+				board,
+			);
 	}
+}
+
+/** Whether a move can reveal cells (and so can start a reveal wave). */
+export function moveReveals(move: Move): boolean {
+	if (move.type === 'batch') return move.action === 'reveal';
+	return move.type === 'reveal' || move.type === 'chord';
+}
+
+/** Where a move's reveal wave starts. */
+export function moveOrigin(move: Move): Index2D {
+	return move.type === 'batch' ? move.indices[0] : move.index;
 }
 
 /** The board before any move: fully hidden, with the recorded mines. */
@@ -77,13 +106,41 @@ export function revealedDiff(prev: Board, next: Board): string[] {
 		.map(Index2D.key);
 }
 
-const CURRENT_VERSION = 1;
+// v1: single moves only. v2 adds batch moves; v1 records still load.
+const CURRENT_VERSION = 2;
+
+type SerializedMove =
+	| [SingleMoveType, number, number]
+	| ['batch', 'flag' | 'reveal', ...number[]];
 
 interface SerializedRecord {
 	readonly v: number;
 	readonly config: GameConfig;
 	readonly mines: readonly string[];
-	readonly moves: readonly [MoveType, number, number][];
+	readonly moves: readonly SerializedMove[];
+}
+
+function serializeMove(move: Move): SerializedMove {
+	if (move.type === 'batch') {
+		return [
+			'batch',
+			move.action,
+			...move.indices.flatMap((i) => [i.x, i.y]),
+		];
+	}
+	return [move.type, move.index.x, move.index.y];
+}
+
+function deserializeMove(move: SerializedMove): Move {
+	if (move[0] === 'batch') {
+		const [, action, ...coords] = move;
+		const indices: Index2D[] = [];
+		for (let i = 0; i + 1 < coords.length; i += 2)
+			indices.push({ x: coords[i], y: coords[i + 1] });
+		return { type: 'batch', action, indices };
+	}
+	const [type, x, y] = move;
+	return { type, index: { x, y } };
 }
 
 export function serializeRecord(record: GameRecord): string {
@@ -91,7 +148,7 @@ export function serializeRecord(record: GameRecord): string {
 		v: CURRENT_VERSION,
 		config: record.config,
 		mines: record.mines,
-		moves: record.moves.map((m) => [m.type, m.index.x, m.index.y]),
+		moves: record.moves.map(serializeMove),
 	};
 	return JSON.stringify(payload);
 }
@@ -99,13 +156,13 @@ export function serializeRecord(record: GameRecord): string {
 export function deserializeRecord(json: string): GameRecord | null {
 	try {
 		const data = JSON.parse(json) as SerializedRecord;
-		if (data.v !== CURRENT_VERSION) return null;
+		if (data.v !== 1 && data.v !== CURRENT_VERSION) return null;
 		if (!data.config || !Array.isArray(data.moves)) return null;
 
 		return {
 			config: data.config,
 			mines: data.mines ?? [],
-			moves: data.moves.map(([type, x, y]) => ({ type, index: { x, y } })),
+			moves: data.moves.map(deserializeMove),
 		};
 	} catch {
 		return null;

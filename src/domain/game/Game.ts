@@ -2,8 +2,11 @@ import Action from '../Action';
 import Board from '../Board';
 import Index2D from '../Index2D';
 import {
+	applyMove,
 	baseBoard,
 	boardsForRecord,
+	moveOrigin,
+	moveReveals,
 	revealedDiff,
 	type GameRecord,
 	type Move,
@@ -62,6 +65,11 @@ export type GameEvent =
 	| { readonly type: 'reveal'; readonly index: Index2D }
 	| { readonly type: 'chord'; readonly index: Index2D }
 	| { readonly type: 'toggleFlag'; readonly index: Index2D }
+	| {
+			readonly type: 'batch';
+			readonly action: 'flag' | 'reveal';
+			readonly indices: readonly Index2D[];
+	  }
 	| { readonly type: 'undo' }
 	| { readonly type: 'redo' }
 	| { readonly type: 'restart'; readonly config?: GameConfig };
@@ -166,6 +174,9 @@ export default class Game {
 			case 'toggleFlag':
 				this.toggleFlag(event.index);
 				break;
+			case 'batch':
+				this.applyMany(event.action, event.indices);
+				break;
 			case 'undo':
 				this.undo();
 				break;
@@ -188,7 +199,7 @@ export default class Game {
 		this.future.length = 0;
 		this.lastReveal = revealedFrom
 			? {
-					origin: move.index,
+					origin: moveOrigin(move),
 					revealed: revealedDiff(revealedFrom, next),
 				}
 			: null;
@@ -243,6 +254,25 @@ export default class Game {
 		this.pushMove({ type: 'chord', index }, next, revealed ? board : null);
 	}
 
+	/**
+	 * Applies several same-type actions as ONE move — the assistant's
+	 * multi-cell suggestions behave like a chord: one undo step, one
+	 * replay tick. Cells that are no longer actionable are skipped.
+	 */
+	applyMany(action: 'flag' | 'reveal', cells: readonly Index2D[]) {
+		const board = this.currentBoard();
+		if (this.deriveStatus(board) !== 'playing') return;
+
+		const indices = cells.map((at) => ({ x: at.x, y: at.y }));
+		const move: Move = { type: 'batch', action, indices };
+		const next = applyMove(board, move);
+
+		const revealed = revealedDiff(board, next).length > 0;
+		if (!revealed && next.flagCount === board.flagCount) return;
+
+		this.pushMove(move, next, revealed ? board : null);
+	}
+
 	toggleFlag(at: Index2D) {
 		const index = { x: at.x, y: at.y };
 		const board = this.currentBoard();
@@ -274,7 +304,7 @@ export default class Game {
 		this.future.push(move);
 
 		// The player saw whatever that move revealed; remember it.
-		if (move.type === 'reveal' || move.type === 'chord') {
+		if (moveReveals(move)) {
 			const previous = this.currentBoard();
 			for (const key of revealedDiff(previous, undoneBoard)) {
 				const cell = undoneBoard.cells.at(Index2D.fromKey(key));
@@ -299,13 +329,12 @@ export default class Game {
 
 		this.moves.push(move);
 		this.boards.push(next);
-		this.lastReveal =
-			move.type === 'reveal' || move.type === 'chord'
-				? {
-						origin: move.index,
-						revealed: revealedDiff(board, next),
-					}
-				: null;
+		this.lastReveal = moveReveals(move)
+			? {
+					origin: moveOrigin(move),
+					revealed: revealedDiff(board, next),
+				}
+			: null;
 		this.commit();
 	}
 

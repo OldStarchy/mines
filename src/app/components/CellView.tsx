@@ -66,9 +66,17 @@ function CellView({
 			style={style}
 			data-cell={`${cell.x},${cell.y}`}
 			disabled={!interactive}
-			onClick={() =>
-				revealedNumber ? onChord(cell) : onReveal(cell)
-			}
+			onClick={() => {
+				if (cell.state.type === 'hidden') onReveal(cell);
+			}}
+			// Chording happens on pointer-down so that keeping the button
+			// held and sweeping across numbers chords each one in passing.
+			onPointerDown={(event) => {
+				if (event.button === 0 && revealedNumber) onChord(cell);
+			}}
+			onPointerOver={(event) => {
+				if (event.buttons === 1 && revealedNumber) onChord(cell);
+			}}
 			onAuxClick={(event) => {
 				// Middle-click always chords.
 				if (event.button === 1) {

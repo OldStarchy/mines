@@ -58,15 +58,9 @@ export default function App() {
 	const chord = (cell: Cell) => act(() => game.chord(cell));
 	const toggleFlag = (cell: Cell) => act(() => game.toggleFlag(cell));
 
-	const applyCells = (type: 'flag' | 'reveal', cells: Index2D[]) => {
-		setHighlight(null);
-		for (const index of cells) {
-			const cell = game.getState().board.cells.atOrNull(index);
-			if (!cell || cell.state.type !== 'hidden') continue;
-			if (type === 'flag') game.toggleFlag(index);
-			else game.reveal(index);
-		}
-	};
+	// Assistant suggestions apply as one move — one undo, one replay tick.
+	const applyCells = (type: 'flag' | 'reveal', cells: Index2D[]) =>
+		act(() => game.applyMany(type, cells));
 
 	const selectConfig = (config: GameConfig) => {
 		setHighlight(null);

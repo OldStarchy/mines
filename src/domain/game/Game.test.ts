@@ -171,6 +171,42 @@ describe('Game', () => {
 		});
 	});
 
+	describe('batch (assistant multi-cell apply)', () => {
+		test('flagging several cells is one undoable move', () => {
+			const game = pocketGame();
+
+			game.applyMany('flag', [
+				{ x: 1, y: 0 },
+				{ x: 0, y: 1 },
+				{ x: 1, y: 1 },
+			]);
+
+			expect(game.getState().board.flagCount).toBe(3);
+			expect(game.getState().moveCount).toBe(2);
+
+			game.undo();
+			expect(game.getState().board.flagCount).toBe(0);
+		});
+
+		test('a batch reveal waves from its first cell', () => {
+			const game = pocketGame();
+
+			game.applyMany('reveal', [{ x: 0, y: 0 }]);
+
+			expect(game.getState().lastReveal?.origin).toEqual({ x: 0, y: 0 });
+			// (0,0) was the last safe cell, so the batch also wins the game.
+			expect(game.getState().status).toBe('won');
+		});
+
+		test('a batch that changes nothing is not recorded', () => {
+			const game = pocketGame();
+
+			game.applyMany('reveal', [{ x: 3, y: 3 }]); // already revealed
+
+			expect(game.getState().moveCount).toBe(1);
+		});
+	});
+
 	describe('undo memory', () => {
 		test('remembers the nature of undone reveals', () => {
 			const game = pocketGame();

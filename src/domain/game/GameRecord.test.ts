@@ -53,6 +53,38 @@ describe('GameRecord', () => {
 		);
 	});
 
+	test('round-trips batch moves', () => {
+		const game = new Game();
+		game.loadRecord({
+			config: { width: 5, height: 5, bombs: 3 },
+			mines: ['1,0', '0,1', '1,1'],
+			moves: [{ type: 'reveal', index: { x: 4, y: 4 } }],
+		});
+		game.applyMany('flag', [
+			{ x: 1, y: 0 },
+			{ x: 1, y: 1 },
+		]);
+
+		const restored = deserializeRecord(
+			serializeRecord(game.getRecord()),
+		)!;
+		expect(restored.moves).toEqual(game.getRecord().moves);
+		// The batch is one move, so it replays as one tick.
+		expect(restored.moves).toHaveLength(2);
+		expect(boardsForRecord(restored)).toHaveLength(2);
+	});
+
+	test('still reads v1 records (single moves only)', () => {
+		const v1 =
+			'{"v":1,"config":{"width":3,"height":3,"bombs":1},"mines":["1,0"],"moves":[["reveal",0,0]]}';
+
+		expect(deserializeRecord(v1)).toEqual({
+			config: { width: 3, height: 3, bombs: 1 },
+			mines: ['1,0'],
+			moves: [{ type: 'reveal', index: { x: 0, y: 0 } }],
+		});
+	});
+
 	test('rejects malformed or versioned-out data', () => {
 		expect(deserializeRecord('not json')).toBeNull();
 		expect(deserializeRecord('{"v":999}')).toBeNull();
