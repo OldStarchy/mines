@@ -54,6 +54,11 @@ describe('App', () => {
 		await expect
 			.element(page.getByText('provable move', { exact: false }))
 			.toBeVisible();
+
+		// A consistent board must never trip the contradiction warning.
+		await expect
+			.element(page.getByText('flags are inconsistent', { exact: false }))
+			.not.toBeInTheDocument();
 	});
 
 	test('undo reverts the last move, redo restores it', async () => {
