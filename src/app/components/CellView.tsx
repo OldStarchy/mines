@@ -25,37 +25,57 @@ function CellView({
 	status,
 	highlight,
 	revealDelay,
+	revealDuration,
+	interactive,
 	onReveal,
+	onChord,
 	onToggleFlag,
 }: {
 	cell: Cell;
 	status: GameStatus;
 	highlight: HighlightRole | undefined;
 	revealDelay: number | undefined;
+	revealDuration: number | undefined;
+	interactive: boolean;
 	onReveal: (cell: Cell) => void;
+	onChord: (cell: Cell) => void;
 	onToggleFlag: (cell: Cell) => void;
 }) {
+	const revealedNumber =
+		cell.state.type === 'revealed' && !cell.isBomb && cell.state.number > 0;
 	const revealed =
 		cell.state.type === 'revealed' ||
 		(status === 'lost' && cell.isBomb === true);
 
 	const classes = ['cell', revealed ? 'cell-revealed' : 'cell-hidden'];
-	if (cell.state.type === 'revealed' && !cell.isBomb && cell.state.number > 0)
-		classes.push(`n${cell.state.number}`);
+	if (revealedNumber) classes.push(`n${(cell.state as { number: number }).number}`);
 	if (cell.state.type === 'revealed' && cell.isBomb) classes.push('cell-hit');
 	if (cell.state.type === 'flagged') classes.push('cell-flagged');
 	if (revealDelay !== undefined) classes.push('cell-pop');
 	if (highlight) classes.push(`hl-${highlight}`);
 
+	const style: React.CSSProperties = {};
+	if (revealDelay !== undefined) style.animationDelay = `${revealDelay}ms`;
+	if (revealDuration !== undefined)
+		style.animationDuration = `${revealDuration}ms`;
+
 	return (
 		<button
 			type="button"
 			className={classes.join(' ')}
-			style={
-				revealDelay ? { animationDelay: `${revealDelay}ms` } : undefined
-			}
+			style={style}
 			data-cell={`${cell.x},${cell.y}`}
-			onClick={() => onReveal(cell)}
+			disabled={!interactive}
+			onClick={() =>
+				revealedNumber ? onChord(cell) : onReveal(cell)
+			}
+			onAuxClick={(event) => {
+				// Middle-click always chords.
+				if (event.button === 1) {
+					event.preventDefault();
+					onChord(cell);
+				}
+			}}
 			onContextMenu={(event) => {
 				event.preventDefault();
 				onToggleFlag(cell);

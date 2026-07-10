@@ -1,9 +1,14 @@
 import { page } from 'vitest/browser';
-import { describe, expect, test } from 'vitest';
+import { beforeEach, describe, expect, test } from 'vitest';
 import { render } from 'vitest-browser-react';
 import App from './App';
 
 describe('App', () => {
+	beforeEach(() => {
+		// The app persists games to localStorage; isolate each test.
+		localStorage.clear();
+	});
+
 	test('visual: idle app layout', async () => {
 		document.documentElement.dataset.theme = 'classic';
 		render(<App />);
@@ -49,5 +54,51 @@ describe('App', () => {
 		await expect
 			.element(page.getByText('provable move', { exact: false }))
 			.toBeVisible();
+	});
+
+	test('undo reverts the last move, redo restores it', async () => {
+		render(<App />);
+		await expect.element(page.getByText('Mines Lab')).toBeVisible();
+
+		const undoButton = page.getByTitle('Undo');
+		const redoButton = page.getByTitle('Redo');
+		await expect.element(undoButton).toBeDisabled();
+
+		const firstCell = document.querySelector(
+			'[data-cell="4,4"]',
+		) as HTMLElement;
+		firstCell.click();
+		await expect.element(undoButton).toBeEnabled();
+		expect(document.querySelector('.cell-revealed')).not.toBeNull();
+
+		await undoButton.click();
+		expect(document.querySelector('.cell-revealed')).toBeNull();
+		await expect.element(undoButton).toBeDisabled();
+
+		await redoButton.click();
+		expect(document.querySelector('.cell-revealed')).not.toBeNull();
+	});
+
+	test('restores the saved game after a remount', async () => {
+		const first = await render(<App />);
+		await expect.element(page.getByText('Mines Lab')).toBeVisible();
+
+		const firstCell = document.querySelector(
+			'[data-cell="4,4"]',
+		) as HTMLElement;
+		firstCell.click();
+		await expect.element(page.getByTitle('Undo')).toBeEnabled();
+		const revealedCount =
+			document.querySelectorAll('.cell-revealed').length;
+		expect(revealedCount).toBeGreaterThan(0);
+
+		await first.unmount();
+		render(<App />);
+		await expect.element(page.getByText('Mines Lab')).toBeVisible();
+
+		// The reload resumed the same game, not a fresh board.
+		expect(document.querySelectorAll('.cell-revealed').length).toBe(
+			revealedCount,
+		);
 	});
 });

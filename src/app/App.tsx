@@ -1,21 +1,29 @@
 import { useEffect, useMemo, useState } from 'react';
 import type Cell from '../domain/Cell';
 import type Index2D from '../domain/Index2D';
-import { PRESETS, type PresetName } from '../domain/game/Game';
+import { PRESETS, type GameConfig } from '../domain/game/Game';
+import { configKey } from '../domain/game/scenario';
 import solve from '../domain/solver/Solver';
 import AssistantPanel from './components/AssistantPanel';
 import BoardView from './components/BoardView';
+import ResumeDialog from './components/ResumeDialog';
 import Toolbar from './components/Toolbar';
 import type { Highlight } from './highlight';
+import { hasSave, loadGame, loadLastConfig } from './persistence';
 import { applyTheme, loadTheme, type ThemeName } from './theme';
 import useGame from './useGame';
 import './styles.css';
 
 export default function App() {
-	const { game, state } = useGame();
+	const [initialConfig] = useState(
+		() => loadLastConfig() ?? PRESETS.beginner,
+	);
+	const { game, state } = useGame(initialConfig);
 	const [theme, setTheme] = useState<ThemeName>(loadTheme);
 	const [assist, setAssist] = useState(false);
 	const [highlight, setHighlight] = useState<Highlight | null>(null);
+	/** Scenario awaiting a resume-or-new decision (has a saved game). */
+	const [pendingConfig, setPendingConfig] = useState<GameConfig | null>(null);
 
 	useEffect(() => applyTheme(theme), [theme]);
 
@@ -27,14 +35,13 @@ export default function App() {
 		[assist, state.status, state.board, state.config.bombs],
 	);
 
-	const reveal = (cell: Cell) => {
+	const act = (action: () => void) => {
 		setHighlight(null);
-		game.reveal(cell);
+		action();
 	};
-	const toggleFlag = (cell: Cell) => {
-		setHighlight(null);
-		game.toggleFlag(cell);
-	};
+	const reveal = (cell: Cell) => act(() => game.reveal(cell));
+	const chord = (cell: Cell) => act(() => game.chord(cell));
+	const toggleFlag = (cell: Cell) => act(() => game.toggleFlag(cell));
 
 	const applyCells = (type: 'flag' | 'reveal', cells: Index2D[]) => {
 		setHighlight(null);
@@ -46,14 +53,46 @@ export default function App() {
 		}
 	};
 
+	const selectConfig = (config: GameConfig) => {
+		setHighlight(null);
+		if (configKey(config) !== configKey(state.config) && hasSave(config)) {
+			setPendingConfig(config);
+		} else {
+			game.restart(config);
+		}
+	};
+
+	const resumeSaved = () => {
+		if (!pendingConfig) return;
+		const saved = loadGame(pendingConfig);
+		if (saved) game.loadRecord(saved);
+		else game.restart(pendingConfig);
+		setPendingConfig(null);
+	};
+
+	const startNew = () => {
+		if (!pendingConfig) return;
+		game.restart(pendingConfig);
+		setPendingConfig(null);
+	};
+
 	return (
 		<div className="app">
 			<Toolbar
 				state={state}
 				theme={theme}
-				onRestart={() => game.restart()}
-				onPreset={(preset: PresetName) => game.restart(PRESETS[preset])}
+				onRestart={() => act(() => game.restart())}
+				onSelectConfig={selectConfig}
+				onUndo={() => act(() => game.undo())}
+				onRedo={() => act(() => game.redo())}
 				onTheme={setTheme}
+			/>
+
+			<ResumeDialog
+				config={pendingConfig}
+				onResume={resumeSaved}
+				onNewGame={startNew}
+				onCancel={() => setPendingConfig(null)}
 			/>
 
 			<main className="main">
@@ -64,6 +103,7 @@ export default function App() {
 						lastReveal={state.lastReveal}
 						highlight={highlight}
 						onReveal={reveal}
+						onChord={chord}
 						onToggleFlag={toggleFlag}
 					/>
 					{state.status === 'won' && (
@@ -71,7 +111,7 @@ export default function App() {
 					)}
 					{state.status === 'lost' && (
 						<p className="banner banner-lost">
-							Boom. Press the face to try again.
+							Boom. Undo the move or press the face to try again.
 						</p>
 					)}
 				</div>

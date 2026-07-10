@@ -9,20 +9,29 @@ import CellView from './CellView';
 const WAVE_STEP_MS = 35;
 const WAVE_MAX_MS = 700;
 
+const noop = () => {};
+
 export default function BoardView({
 	board,
 	status,
 	lastReveal,
 	highlight,
-	onReveal,
-	onToggleFlag,
+	interactive = true,
+	/** Scales the flood-fill wave; 1 is normal, lower is faster (replay). */
+	waveScale = 1,
+	onReveal = noop,
+	onChord = noop,
+	onToggleFlag = noop,
 }: {
 	board: Board;
 	status: GameStatus;
 	lastReveal: GameState['lastReveal'];
 	highlight: Highlight | null;
-	onReveal: (cell: Cell) => void;
-	onToggleFlag: (cell: Cell) => void;
+	interactive?: boolean;
+	waveScale?: number;
+	onReveal?: (cell: Cell) => void;
+	onChord?: (cell: Cell) => void;
+	onToggleFlag?: (cell: Cell) => void;
 }) {
 	// Flood-fill wave: each newly revealed cell pops after a delay
 	// proportional to its distance from the clicked cell.
@@ -35,10 +44,16 @@ export default function BoardView({
 				Math.abs(x - lastReveal.origin.x),
 				Math.abs(y - lastReveal.origin.y),
 			);
-			delays.set(key, Math.min(distance * WAVE_STEP_MS, WAVE_MAX_MS));
+			delays.set(
+				key,
+				Math.min(distance * WAVE_STEP_MS, WAVE_MAX_MS) * waveScale,
+			);
 		}
 		return delays;
-	}, [lastReveal]);
+	}, [lastReveal, waveScale]);
+
+	const revealDuration = waveScale === 1 ? undefined : 240 * waveScale;
+
 	return (
 		<div
 			className="board"
@@ -54,7 +69,10 @@ export default function BoardView({
 					status={status}
 					highlight={highlight?.get(Index2D.key(cell))}
 					revealDelay={revealDelays?.get(Index2D.key(cell))}
+					revealDuration={revealDuration}
+					interactive={interactive}
 					onReveal={onReveal}
+					onChord={onChord}
 					onToggleFlag={onToggleFlag}
 				/>
 			))}
