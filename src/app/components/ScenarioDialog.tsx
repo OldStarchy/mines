@@ -59,9 +59,11 @@ function Field({
 export default function ScenarioDialog({
 	config,
 	onSubmit,
+	submitLabel = 'Start game',
 }: {
 	config: GameConfig;
 	onSubmit: (config: GameConfig) => void;
+	submitLabel?: string;
 }) {
 	const [open, setOpen] = useState(false);
 	const [width, setWidth] = useState(config.width);
@@ -155,7 +157,7 @@ export default function ScenarioDialog({
 								setOpen(false);
 							}}
 						>
-							Start game
+							{submitLabel}
 						</button>
 					</div>
 				</Dialog.Popup>

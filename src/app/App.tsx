@@ -3,20 +3,26 @@ import type Cell from '../domain/Cell';
 import type Index2D from '../domain/Index2D';
 import { PRESETS, type GameConfig } from '../domain/game/Game';
 import { configKey } from '../domain/game/scenario';
+import type Session from '../domain/multiplayer/Session';
 import solve from '../domain/solver/Solver';
 import AssistantPanel from './components/AssistantPanel';
 import BoardView from './components/BoardView';
+import MultiplayerLauncher, {
+	type Connector,
+} from './components/MultiplayerLauncher';
+import MultiplayerView from './components/MultiplayerView';
 import ReplayControls from './components/ReplayControls';
 import ResumeDialog from './components/ResumeDialog';
+import ThemedSelect from './components/ThemedSelect';
 import Toolbar from './components/Toolbar';
 import type { Highlight } from './highlight';
 import { hasSave, loadGame, loadLastConfig } from './persistence';
-import { applyTheme, loadTheme, type ThemeName } from './theme';
+import { THEMES, applyTheme, loadTheme, type ThemeName } from './theme';
 import useGame from './useGame';
 import useReplay from './useReplay';
 import './styles.css';
 
-export default function App() {
+export default function App({ connector }: { connector?: Connector }) {
 	const [initialConfig] = useState(
 		() => loadLastConfig() ?? PRESETS.beginner,
 	);
@@ -29,6 +35,24 @@ export default function App() {
 	/** Scenario awaiting a resume-or-new decision (has a saved game). */
 	const [pendingConfig, setPendingConfig] = useState<GameConfig | null>(null);
 	const replay = useReplay();
+
+	/** Host id from a ?join= share link, consumed once on load. */
+	const [joinId, setJoinId] = useState(() => {
+		const id = new URLSearchParams(location.search).get('join');
+		if (id) history.replaceState(null, '', location.pathname);
+		return id;
+	});
+	const [session, setSession] = useState<Session | null>(null);
+	const [launcherOpen, setLauncherOpen] = useState(joinId !== null);
+
+	const adoptSession = (next: Session) => {
+		setSession(next);
+		setJoinId(null);
+	};
+	const leaveSession = () => {
+		session?.close();
+		setSession(null);
+	};
 
 	useEffect(() => applyTheme(theme), [theme]);
 
@@ -85,6 +109,25 @@ export default function App() {
 		setPendingConfig(null);
 	};
 
+	if (session) {
+		return (
+			<div className="app">
+				<header className="toolbar">
+					<h1 className="title">Mines Lab</h1>
+					<div className="toolbar-controls">
+						<ThemedSelect
+							ariaLabel="Theme"
+							value={theme}
+							items={THEMES}
+							onValueChange={setTheme}
+						/>
+					</div>
+				</header>
+				<MultiplayerView session={session} onLeave={leaveSession} />
+			</div>
+		);
+	}
+
 	return (
 		<div className="app">
 			<Toolbar
@@ -95,6 +138,15 @@ export default function App() {
 				onUndo={() => act(() => game.undo())}
 				onRedo={() => act(() => game.redo())}
 				onTheme={setTheme}
+				onMultiplayer={() => setLauncherOpen(true)}
+			/>
+
+			<MultiplayerLauncher
+				open={launcherOpen}
+				onOpenChange={setLauncherOpen}
+				joinId={joinId}
+				onSession={adoptSession}
+				connector={connector}
 			/>
 
 			<ResumeDialog

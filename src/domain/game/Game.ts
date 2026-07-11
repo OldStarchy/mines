@@ -86,6 +86,12 @@ export type GameEvent =
 export default class Game {
 	private config: GameConfig;
 	private mines: string[] = [];
+	/**
+	 * A mine layout fixed from outside (a multiplayer host or a loaded
+	 * record). While set, the first reveal uses it instead of
+	 * randomizing, so replicas and rematches reproduce the same board.
+	 */
+	private seededMines: string[] | null = null;
 	private moves: Move[] = [];
 	/** boards[i] is the board after moves[i]; base board is not stored. */
 	private boards: Board[] = [];
@@ -191,6 +197,18 @@ export default class Game {
 		}
 	}
 
+	/**
+	 * Fixes the mine layout before the game starts (multiplayer replicas
+	 * receive the host's layout this way). Ignored once a move exists;
+	 * calling again at move zero replaces the layout.
+	 */
+	seedMines(mines: readonly string[]) {
+		if (this.moves.length > 0) return;
+		this.seededMines = [...mines];
+		this.mines = [...mines];
+		this.commit();
+	}
+
 	/** Records a move that produced `next`, dropping any redo branch. */
 	private pushMove(move: Move, next: Board, revealedFrom: Board | null) {
 		if (this.moves.length === 0) this.startedAt = Date.now();
@@ -214,7 +232,18 @@ export default class Game {
 
 		// First reveal places bombs (avoiding the click) and starts a
 		// fresh branch, re-randomizing so the first click is always safe.
+		// Seeded games keep their fixed layout instead.
 		if (status === 'idle') {
+			if (this.seededMines) {
+				this.mines = [...this.seededMines];
+				const base = this.currentBoard();
+				this.pushMove(
+					{ type: 'reveal', index },
+					base.applyAction(Action.reveal(index)),
+					base,
+				);
+				return;
+			}
 			const seeded = Board.ofSize(
 				this.config.width,
 				this.config.height,
@@ -341,6 +370,7 @@ export default class Game {
 	restart(config?: GameConfig) {
 		this.config = config ?? this.config;
 		this.mines = [];
+		this.seededMines = null;
 		this.moves = [];
 		this.boards = [];
 		this.future = [];
@@ -355,6 +385,9 @@ export default class Game {
 	loadRecord(record: GameRecord) {
 		this.config = record.config;
 		this.mines = [...record.mines];
+		// A loaded layout stays fixed: undoing back to the start and
+		// re-revealing must not re-roll the board (competitive fairness).
+		this.seededMines = record.mines.length > 0 ? [...record.mines] : null;
 		this.moves = [...record.moves];
 		this.boards = boardsForRecord(record);
 		this.future = [];

@@ -16,13 +16,13 @@ const FACES = {
 	lost: '😵',
 } as const;
 
-const PRESET_LABELS: Record<PresetName, string> = {
+export const PRESET_LABELS: Record<PresetName, string> = {
 	beginner: 'Beginner 9×9',
 	intermediate: 'Intermediate 16×16',
 	expert: 'Expert 30×16',
 };
 
-function presetOf(config: GameConfig): PresetName | null {
+export function presetOf(config: GameConfig): PresetName | null {
 	return (
 		(Object.keys(PRESETS) as PresetName[]).find(
 			(name) =>
@@ -41,6 +41,7 @@ export default function Toolbar({
 	onUndo,
 	onRedo,
 	onTheme,
+	onMultiplayer,
 }: {
 	state: GameState;
 	theme: ThemeName;
@@ -49,6 +50,7 @@ export default function Toolbar({
 	onUndo: () => void;
 	onRedo: () => void;
 	onTheme: (theme: ThemeName) => void;
+	onMultiplayer: () => void;
 }) {
 	const minesLeft = state.config.bombs - state.board.flagCount;
 	const preset = presetOf(state.config);
@@ -111,6 +113,13 @@ export default function Toolbar({
 					}}
 				/>
 				<ScenarioDialog config={state.config} onSubmit={onSelectConfig} />
+				<button
+					type="button"
+					className="button"
+					onClick={onMultiplayer}
+				>
+					👥 Multiplayer
+				</button>
 				<ThemedSelect
 					ariaLabel="Theme"
 					value={theme}

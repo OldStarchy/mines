@@ -207,6 +207,44 @@ describe('Game', () => {
 		});
 	});
 
+	describe('seeded mines', () => {
+		test('the first reveal uses the seeded layout instead of randomizing', () => {
+			const game = new Game({ width: 5, height: 5, bombs: 3 });
+			game.seedMines(['1,0', '0,1', '1,1']);
+
+			game.reveal({ x: 4, y: 4 });
+
+			expect(game.getRecord().mines).toEqual(['1,0', '0,1', '1,1']);
+			expect(game.getState().status).toBe('playing');
+		});
+
+		test('seeding is ignored once a move exists', () => {
+			const game = pocketGame();
+			game.seedMines(['4,4']);
+			expect(game.getRecord().mines).toEqual(['1,0', '0,1', '1,1']);
+		});
+
+		test('a loaded record keeps its layout after undoing to the start', () => {
+			const game = pocketGame();
+			game.undo();
+			expect(game.getState().moveCount).toBe(0);
+
+			game.reveal({ x: 4, y: 4 });
+			expect(game.getRecord().mines).toEqual(['1,0', '0,1', '1,1']);
+		});
+
+		test('restart clears the seeded layout', () => {
+			// If the seed survived the restart, revealing the seeded mine
+			// would lose; a cleared seed re-randomizes with a safe click.
+			const game = new Game({ width: 5, height: 5, bombs: 3 });
+			game.seedMines(['4,4']);
+			game.restart();
+
+			game.reveal({ x: 4, y: 4 });
+			expect(game.getState().status).not.toBe('lost');
+		});
+	});
+
 	describe('undo memory', () => {
 		test('remembers the nature of undone reveals', () => {
 			const game = pocketGame();
