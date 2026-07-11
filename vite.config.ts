@@ -13,6 +13,7 @@ export default defineConfig({
 					name: 'unit',
 					environment: 'node',
 					include: ['src/domain/**/*.test.ts'],
+					setupFiles: ['src/setupTests.ts'],
 				},
 			},
 			{
@@ -20,6 +21,7 @@ export default defineConfig({
 				test: {
 					name: 'browser',
 					include: ['src/app/**/*.test.tsx'],
+					setupFiles: ['src/setupTests.ts'],
 					browser: {
 						enabled: true,
 						headless: true,

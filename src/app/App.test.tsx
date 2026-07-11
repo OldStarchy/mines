@@ -35,7 +35,25 @@ describe('App', () => {
 			.toHaveTextContent('010');
 
 		// Right-click flags a hidden cell and decrements the counter.
-		const hidden = document.querySelector('.cell-hidden') as HTMLElement;
+		// Pick one with no revealed neighbors: a flag deep in unknown
+		// territory can never be *provably* wrong, so the contradiction
+		// assertion below stays deterministic on a random board.
+		const isHidden = (x: number, y: number) =>
+			document
+				.querySelector(`[data-cell="${x},${y}"]`)
+				?.classList.contains('cell-hidden') ?? true;
+		const hidden = [...document.querySelectorAll('.cell-hidden')].find(
+			(cell) => {
+				const [x, y] = (cell as HTMLElement).dataset
+					.cell!.split(',')
+					.map(Number);
+				for (let dx = -1; dx <= 1; dx++)
+					for (let dy = -1; dy <= 1; dy++)
+						if (!isHidden(x + dx, y + dy)) return false;
+				return true;
+			},
+		) as HTMLElement | undefined ??
+			(document.querySelector('.cell-hidden') as HTMLElement);
 		hidden.dispatchEvent(
 			new MouseEvent('contextmenu', { bubbles: true, cancelable: true }),
 		);
