@@ -1,0 +1,59 @@
+/* Dusk-theme-only atmosphere: a violet-to-amber horizon glow and a
+   sparse field of stars, one layer twinkling very slowly. */
+
+:root[data-theme='dusk'] .app::before {
+	content: '';
+	position: fixed;
+	inset: 0;
+	z-index: -1;
+	pointer-events: none;
+	background:
+		radial-gradient(
+			130% 45% at 50% 112%,
+			rgba(255, 180, 84, 0.1),
+			rgba(187, 154, 247, 0.05) 45%,
+			transparent 70%
+		),
+		radial-gradient(
+			90% 60% at 80% -10%,
+			rgba(130, 170, 255, 0.07),
+			transparent 60%
+		);
+}
+
+:root[data-theme='dusk'] .app::after {
+	content: '';
+	position: fixed;
+	inset: 0;
+	z-index: -1;
+	pointer-events: none;
+	background-image:
+		radial-gradient(1.5px 1.5px at 30px 40px, rgba(232, 228, 242, 0.8), transparent 70%),
+		radial-gradient(1px 1px at 200px 120px, rgba(232, 228, 242, 0.7), transparent 70%),
+		radial-gradient(1px 1px at 110px 220px, rgba(187, 154, 247, 0.6), transparent 70%),
+		radial-gradient(1.5px 1.5px at 260px 60px, rgba(130, 170, 255, 0.5), transparent 70%),
+		radial-gradient(1px 1px at 60px 150px, rgba(232, 228, 242, 0.5), transparent 70%);
+	background-size:
+		420px 380px,
+		420px 380px,
+		300px 340px,
+		300px 340px,
+		260px 260px;
+	animation: dusk-twinkle 9s ease-in-out infinite alternate;
+	opacity: 0.35;
+}
+
+@keyframes dusk-twinkle {
+	from {
+		opacity: 0.25;
+	}
+	to {
+		opacity: 0.45;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	:root[data-theme='dusk'] .app::after {
+		animation: none;
+	}
+}

@@ -3,6 +3,7 @@ export const THEMES = {
 	midnight: 'Midnight',
 	mint: 'Mint',
 	dragon: 'Dragon',
+	dusk: 'Dusk',
 } as const;
 
 export type ThemeName = keyof typeof THEMES;
