@@ -1,0 +1,99 @@
+/* Dragon-theme-only decorations: emoji guardians around the title, a
+   faint coiled-dragon watermark, and embers drifting up the screen. */
+
+:root[data-theme='dragon'] .title {
+	text-shadow: 0 0 14px rgba(255, 107, 53, 0.45);
+}
+
+:root[data-theme='dragon'] .title::before,
+:root[data-theme='dragon'] .title::after {
+	content: '🐉';
+	display: inline-block;
+	font-size: 0.85em;
+	/* Push the stock green emoji toward the theme's ember red. */
+	filter: sepia(1) saturate(2.4) hue-rotate(-28deg) brightness(0.95);
+}
+
+:root[data-theme='dragon'] .title::before {
+	margin-right: 10px;
+	transform: scaleX(-1);
+}
+
+:root[data-theme='dragon'] .title::after {
+	margin-left: 10px;
+}
+
+/* Watermark: the dragon guards the board from the lower right. */
+:root[data-theme='dragon'] .app::before {
+	content: '';
+	position: fixed;
+	inset: 0;
+	z-index: -1;
+	pointer-events: none;
+	background: url('../assets/dragon.svg') right -60px bottom -50px / 480px
+		auto no-repeat;
+	opacity: 0.07;
+}
+
+/* Embers: a static hearth glow plus three parallax layers of sparks.
+   Each moving layer's travel is a whole multiple of its tile height,
+   so the loop is seamless. */
+:root[data-theme='dragon'] .app::after {
+	content: '';
+	position: fixed;
+	inset: 0;
+	z-index: -1;
+	pointer-events: none;
+	background-image:
+		radial-gradient(
+			120% 55% at 50% 108%,
+			rgba(255, 90, 30, 0.16),
+			transparent 65%
+		),
+		radial-gradient(3px 3px at 40px 60px, rgba(255, 140, 60, 0.8), transparent 70%),
+		radial-gradient(2px 2px at 250px 290px, rgba(255, 90, 40, 0.7), transparent 70%),
+		radial-gradient(2px 2px at 120px 160px, rgba(255, 170, 90, 0.6), transparent 70%),
+		radial-gradient(3px 3px at 220px 60px, rgba(255, 120, 50, 0.5), transparent 70%),
+		radial-gradient(2px 2px at 60px 170px, rgba(255, 150, 70, 0.6), transparent 70%),
+		radial-gradient(2px 2px at 170px 40px, rgba(255, 200, 120, 0.5), transparent 70%);
+	background-size:
+		100% 100%,
+		420px 420px,
+		420px 420px,
+		300px 300px,
+		300px 300px,
+		240px 240px,
+		240px 240px;
+	background-repeat: no-repeat, repeat, repeat, repeat, repeat, repeat, repeat;
+	animation: dragon-embers 48s linear infinite;
+	opacity: 0.5;
+}
+
+@keyframes dragon-embers {
+	from {
+		background-position:
+			0 0,
+			0 0,
+			0 0,
+			0 0,
+			0 0,
+			0 0,
+			0 0;
+	}
+	to {
+		background-position:
+			0 0,
+			0 -840px,
+			0 -840px,
+			0 -900px,
+			0 -900px,
+			0 -960px,
+			0 -960px;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	:root[data-theme='dragon'] .app::after {
+		animation: none;
+	}
+}

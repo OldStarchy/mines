@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 440" fill="#ff6b35">
+	<!-- body: a coil from head (upper left) clockwise round to the tail -->
+	<path d="M 120 162
+		A 170 170 0 0 1 450 220
+		A 170 170 0 0 1 120 278
+		L 105 295
+		L 169 260
+		A 118 118 0 0 0 398 220
+		A 118 118 0 0 0 169 180
+		Z" />
+	<!-- back spikes -->
+	<path d="M 180 82 L 182 50 L 211 65 Z" />
+	<path d="M 349 65 L 378 50 L 380 82 Z" />
+	<path d="M 449 202 L 476 220 L 449 238 Z" />
+	<path d="M 380 357 L 378 390 L 349 375 Z" />
+	<path d="M 211 375 L 182 390 L 180 357 Z" />
+	<!-- tail spade -->
+	<path d="M 125 272 L 70 310 L 122 322 Q 106 296 125 272 Z" />
+	<!-- head: open jaw facing down-left, two swept-back horns -->
+	<path d="M 168 132
+		L 198 36
+		L 154 88
+		L 148 32
+		L 118 84
+		L 30 128
+		L 86 156
+		L 40 206
+		L 130 208
+		Z" />
+</svg>
