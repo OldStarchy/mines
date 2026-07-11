@@ -1,0 +1,25 @@
+.replay-bar {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	padding: 8px 12px;
+	background: var(--surface);
+	border: 2px solid var(--border);
+	border-radius: 6px;
+}
+
+.replay-progress {
+	font-size: 13px;
+	font-variant-numeric: tabular-nums;
+	color: var(--muted);
+	min-width: 80px;
+}
+
+.replay-speeds {
+	display: flex;
+	gap: 4px;
+}
+
+.replay-speeds .button-mini {
+	margin-top: 0;
+}

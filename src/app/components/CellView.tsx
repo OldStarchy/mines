@@ -41,14 +41,15 @@ function CellView({
 	onChord: (cell: Cell) => void;
 	onToggleFlag: (cell: Cell) => void;
 }) {
-	const revealedNumber =
-		cell.state.type === 'revealed' && !cell.isBomb && cell.state.number > 0;
+	const number =
+		cell.state.type === 'revealed' && !cell.isBomb ? cell.state.number : 0;
+	const revealedNumber = number > 0;
 	const revealed =
 		cell.state.type === 'revealed' ||
 		(status === 'lost' && cell.isBomb === true);
 
 	const classes = ['cell', revealed ? 'cell-revealed' : 'cell-hidden'];
-	if (revealedNumber) classes.push(`n${(cell.state as { number: number }).number}`);
+	if (revealedNumber) classes.push(`n${number}`);
 	if (cell.state.type === 'revealed' && cell.isBomb) classes.push('cell-hit');
 	if (cell.state.type === 'flagged') classes.push('cell-flagged');
 	if (revealDelay !== undefined) classes.push('cell-pop');

@@ -1,0 +1,59 @@
+.dialog-backdrop {
+	position: fixed;
+	inset: 0;
+	background: rgba(0, 0, 0, 0.45);
+	z-index: 20;
+}
+
+.dialog {
+	position: fixed;
+	top: 50%;
+	left: 50%;
+	translate: -50% -50%;
+	z-index: 21;
+	width: 360px;
+	max-width: calc(100vw - 32px);
+	background: var(--surface);
+	border: 2px solid var(--border);
+	border-radius: 8px;
+	padding: 18px;
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+	box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+}
+
+.dialog-title {
+	margin: 0;
+	font-size: 16px;
+}
+
+.dialog-description {
+	margin: 0;
+	font-size: 13px;
+	color: var(--muted);
+	line-height: 1.5;
+}
+
+.dialog-fields {
+	display: flex;
+	gap: 10px;
+}
+
+.dialog-suggestions {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	flex-wrap: wrap;
+}
+
+.dialog-suggestions .button-mini {
+	margin-top: 0;
+}
+
+.dialog-actions {
+	display: flex;
+	justify-content: flex-end;
+	gap: 8px;
+	margin-top: 4px;
+}

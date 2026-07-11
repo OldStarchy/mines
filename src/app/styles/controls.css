@@ -1,0 +1,221 @@
+/* Shared controls: buttons plus styling for the headless Base UI
+   primitives (select, switch, number field). */
+
+.button {
+	font: inherit;
+	font-size: 13px;
+	padding: 5px 14px;
+	border-radius: 4px;
+	cursor: pointer;
+	background: var(--cell-hidden);
+	color: var(--text);
+	border: 2px solid;
+	border-color: var(--bevel-light) var(--bevel-dark) var(--bevel-dark)
+		var(--bevel-light);
+}
+
+.button:active {
+	border-color: var(--bevel-dark) var(--bevel-light) var(--bevel-light)
+		var(--bevel-dark);
+}
+
+.button-mini {
+	display: block;
+	font-size: 11px;
+	padding: 2px 8px;
+	margin-top: 3px;
+}
+
+.button:disabled {
+	opacity: 0.45;
+	cursor: default;
+}
+
+.button-icon {
+	padding: 5px 9px;
+	font-size: 14px;
+	line-height: 1;
+}
+
+.button-primary {
+	background: var(--accent);
+	color: var(--bg);
+	font-weight: 600;
+	border-color: transparent;
+}
+
+.button-primary:active {
+	border-color: transparent;
+	filter: brightness(0.9);
+}
+
+.button-selected {
+	outline: 2px solid var(--accent);
+	outline-offset: -1px;
+}
+
+.field {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+}
+
+.field-label {
+	font-size: 12px;
+	color: var(--muted);
+}
+
+.number-field-group {
+	display: flex;
+	border: 1px solid var(--border);
+	border-radius: 4px;
+	overflow: hidden;
+	background: var(--cell-revealed);
+}
+
+.number-field-input {
+	width: 100%;
+	min-width: 0;
+	border: none;
+	background: transparent;
+	color: var(--text);
+	font: inherit;
+	font-size: 14px;
+	font-variant-numeric: tabular-nums;
+	text-align: center;
+	padding: 5px 2px;
+}
+
+.number-field-input:focus {
+	outline: 2px solid var(--accent);
+	outline-offset: -2px;
+}
+
+.number-field-button {
+	all: unset;
+	cursor: pointer;
+	padding: 0 9px;
+	font-size: 14px;
+	color: var(--muted);
+	background: var(--cell-hidden);
+}
+
+.number-field-button:hover {
+	color: var(--text);
+	background: var(--cell-hidden-hover);
+}
+
+.select-trigger {
+	all: unset;
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	padding: 6px 12px;
+	font-size: 13px;
+	border-radius: 4px;
+	background: var(--cell-hidden);
+	border: 1px solid var(--border);
+	cursor: pointer;
+	color: var(--text);
+}
+
+.select-trigger:focus-visible {
+	outline: 2px solid var(--accent);
+}
+
+.select-icon {
+	color: var(--muted);
+	font-size: 11px;
+}
+
+.select-positioner {
+	z-index: 10;
+	outline: none;
+}
+
+.select-popup {
+	background: var(--surface);
+	border: 1px solid var(--border);
+	border-radius: 6px;
+	padding: 4px;
+	box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+}
+
+.select-item {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 6px 10px;
+	font-size: 13px;
+	border-radius: 4px;
+	cursor: pointer;
+	outline: none;
+}
+
+.select-item[data-highlighted] {
+	background: var(--hl-group);
+}
+
+.select-item-indicator {
+	width: 14px;
+	color: var(--accent);
+}
+
+.select-item:not([data-selected]) .select-item-indicator {
+	visibility: hidden;
+}
+
+.switch {
+	all: unset;
+	width: 40px;
+	height: 22px;
+	border-radius: 11px;
+	background: var(--cell-hidden);
+	border: 1px solid var(--border);
+	position: relative;
+	cursor: pointer;
+	transition: background 150ms;
+}
+
+.switch[data-checked] {
+	background: var(--accent);
+}
+
+.switch:focus-visible {
+	outline: 2px solid var(--accent);
+	outline-offset: 2px;
+}
+
+.switch-thumb {
+	position: absolute;
+	top: 2px;
+	left: 2px;
+	width: 18px;
+	height: 18px;
+	border-radius: 50%;
+	background: var(--bevel-light);
+	box-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+	transition: left 150ms;
+}
+
+.switch-thumb[data-checked] {
+	left: 20px;
+}
+
+/* Compact variant, e.g. the assistant's undo-memory toggle. Must come
+   after .switch so the equal-specificity size overrides win. */
+.switch-small {
+	width: 32px;
+	height: 18px;
+	border-radius: 9px;
+}
+
+.switch-small .switch-thumb {
+	width: 14px;
+	height: 14px;
+}
+
+.switch-small[data-checked] .switch-thumb {
+	left: 16px;
+}
