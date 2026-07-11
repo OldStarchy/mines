@@ -46,7 +46,7 @@ describe('BoardView', () => {
 		expect(document.querySelectorAll('.cell-hidden')).toHaveLength(6);
 	});
 
-	for (const theme of ['classic', 'midnight', 'mint']) {
+	for (const theme of ['classic', 'midnight', 'mint', 'dragon']) {
 		test(`visual: ${theme} theme`, async () => {
 			renderBoard(theme);
 			await expect.element(page.getByText('3')).toBeVisible();

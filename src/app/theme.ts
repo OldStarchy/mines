@@ -2,6 +2,7 @@ export const THEMES = {
 	classic: 'Classic',
 	midnight: 'Midnight',
 	mint: 'Mint',
+	dragon: 'Dragon',
 } as const;
 
 export type ThemeName = keyof typeof THEMES;
