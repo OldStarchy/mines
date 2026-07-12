@@ -1,4 +1,4 @@
-import type { GameConfig } from '../domain/game/Game';
+import type { GameConfig, GameStatus } from '../domain/game/Game';
 import {
 	deserializeRecord,
 	serializeRecord,
@@ -7,7 +7,24 @@ import {
 import { configKey } from '../domain/game/scenario';
 
 const SAVE_PREFIX = 'mines.save.';
+const META_SUFFIX = '.meta';
 const LAST_CONFIG_KEY = 'mines.lastConfig';
+
+/**
+ * Sidecar to a saved record: everything about the session that is NOT
+ * derivable from the move log — play time, raw click count, whether
+ * assists were used — plus the status so the difficulty menu can tell
+ * in-progress saves from finished ones without replaying the record.
+ */
+export interface SaveMeta {
+	/** Milliseconds of play time accumulated when the save was written. */
+	readonly elapsed: number;
+	readonly status: GameStatus;
+	/** Raw board clicks this game, including no-ops. */
+	readonly clicks: number;
+	/** The assistant was on, or undo was used, at some point. */
+	readonly assisted: boolean;
+}
 
 function safeGet(key: string): string | null {
 	try {
@@ -38,13 +55,15 @@ function safeRemove(key: string) {
  * difficulty (and each custom board) keeps its own in-progress game.
  * An untouched game clears the slot rather than saving an empty record.
  */
-export function saveGame(record: GameRecord) {
+export function saveGame(record: GameRecord, meta: SaveMeta) {
 	const key = SAVE_PREFIX + configKey(record.config);
 	if (record.moves.length === 0) {
 		safeRemove(key);
+		safeRemove(key + META_SUFFIX);
 		return;
 	}
 	safeSet(key, serializeRecord(record));
+	safeSet(key + META_SUFFIX, JSON.stringify(meta));
 }
 
 export function loadGame(config: GameConfig): GameRecord | null {
@@ -52,12 +71,33 @@ export function loadGame(config: GameConfig): GameRecord | null {
 	return json ? deserializeRecord(json) : null;
 }
 
+export function loadMeta(config: GameConfig): SaveMeta | null {
+	const json = safeGet(SAVE_PREFIX + configKey(config) + META_SUFFIX);
+	if (!json) return null;
+	try {
+		const meta = JSON.parse(json) as SaveMeta;
+		if (typeof meta?.elapsed === 'number') return meta;
+	} catch {
+		// fall through
+	}
+	return null;
+}
+
 export function hasSave(config: GameConfig): boolean {
 	return safeGet(SAVE_PREFIX + configKey(config)) !== null;
 }
 
+/** A save exists and its game is still unfinished. */
+export function hasSaveInProgress(config: GameConfig): boolean {
+	if (!hasSave(config)) return false;
+	const meta = loadMeta(config);
+	// Saves from before meta existed can't tell; assume resumable.
+	return meta ? meta.status === 'playing' : true;
+}
+
 export function clearSave(config: GameConfig) {
 	safeRemove(SAVE_PREFIX + configKey(config));
+	safeRemove(SAVE_PREFIX + configKey(config) + META_SUFFIX);
 }
 
 export function saveLastConfig(config: GameConfig) {

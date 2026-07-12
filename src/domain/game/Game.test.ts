@@ -148,6 +148,18 @@ describe('Game', () => {
 		expect(state.board.bombCount).toBe(0);
 	});
 
+	test('a loaded record resumes its accumulated play time', () => {
+		const game = pocketGame();
+		expect(game.getState().startedAt).not.toBeNull();
+
+		const resumed = new Game();
+		resumed.loadRecord(game.getRecord(), 5000);
+
+		const elapsed = Date.now() - resumed.getState().startedAt!;
+		expect(elapsed).toBeGreaterThanOrEqual(5000);
+		expect(elapsed).toBeLessThan(6000);
+	});
+
 	describe('undo/redo', () => {
 		test('undo reverts the last move, redo re-applies it', () => {
 			const game = pocketGame();

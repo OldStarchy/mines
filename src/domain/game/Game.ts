@@ -448,8 +448,12 @@ export default class Game {
 		this.commit();
 	}
 
-	/** Replaces the whole session with a saved record (undo memory resets). */
-	loadRecord(record: GameRecord) {
+	/**
+	 * Replaces the whole session with a saved record (undo memory
+	 * resets). `elapsedMs` restores previously accumulated play time so
+	 * the timer resumes instead of restarting from zero.
+	 */
+	loadRecord(record: GameRecord, elapsedMs = 0) {
 		this.config = record.config;
 		this.mines = [...record.mines];
 		// A loaded layout stays fixed: undoing back to the start and
@@ -459,7 +463,8 @@ export default class Game {
 		this.boards = boardsForRecord(record);
 		this.future = [];
 		this.memory.clear();
-		this.startedAt = record.moves.length > 0 ? Date.now() : null;
+		this.startedAt =
+			record.moves.length > 0 ? Date.now() - elapsedMs : null;
 		this.endedAt = null;
 		this.lastReveal = null;
 		this.commit();

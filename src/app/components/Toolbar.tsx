@@ -4,6 +4,8 @@ import type {
 	PresetName,
 } from '../../domain/game/Game';
 import { PRESETS } from '../../domain/game/Game';
+import { configKey } from '../../domain/game/scenario';
+import { hasSaveInProgress } from '../persistence';
 import { THEMES, type ThemeName } from '../theme';
 import ScenarioDialog from './ScenarioDialog';
 import ThemedSelect from './ThemedSelect';
@@ -54,12 +56,28 @@ export default function Toolbar({
 }) {
 	const minesLeft = state.config.bombs - state.board.flagCount;
 	const preset = presetOf(state.config);
-	const presetItems: Record<string, string> = preset
-		? PRESET_LABELS
-		: {
-				...PRESET_LABELS,
-				custom: `Custom ${state.config.width}×${state.config.height}`,
-			};
+
+	// A dot marks layouts with a game to resume. The current layout is
+	// judged from live state — its autosave lags this render by a tick.
+	const inProgress = (config: GameConfig): boolean =>
+		configKey(config) === configKey(state.config)
+			? state.status === 'playing'
+			: hasSaveInProgress(config);
+	const withSaveDot = (label: string, config: GameConfig) =>
+		inProgress(config) ? `${label} ●` : label;
+
+	const presetItems: Record<string, string> = Object.fromEntries(
+		(Object.keys(PRESET_LABELS) as PresetName[]).map((name) => [
+			name,
+			withSaveDot(PRESET_LABELS[name], PRESETS[name]),
+		]),
+	);
+	if (!preset) {
+		presetItems.custom = withSaveDot(
+			`Custom ${state.config.width}×${state.config.height}`,
+			state.config,
+		);
+	}
 
 	return (
 		<header className="toolbar">

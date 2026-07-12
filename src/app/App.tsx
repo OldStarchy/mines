@@ -16,7 +16,7 @@ import ResumeDialog from './components/ResumeDialog';
 import ThemedSelect from './components/ThemedSelect';
 import Toolbar from './components/Toolbar';
 import type { Highlight } from './highlight';
-import { hasSave, loadGame, loadLastConfig } from './persistence';
+import { hasSave, loadLastConfig } from './persistence';
 import {
 	THEMES,
 	applyTheme,
@@ -34,7 +34,8 @@ export default function App({ connector }: { connector?: Connector }) {
 	const [initialConfig] = useState(
 		() => loadLastConfig() ?? PRESETS.beginner,
 	);
-	const { game, state } = useGame(initialConfig);
+	const { game, state, resume, noteClick, noteAssist } =
+		useGame(initialConfig);
 	const [theme, setTheme] = useState<ThemeName>(loadTheme);
 	const [assist, setAssist] = useState(false);
 	/** Off by default: reasoning from undone reveals is meta-gaming. */
@@ -79,6 +80,11 @@ export default function App({ connector }: { connector?: Connector }) {
 		setTheme(next);
 	};
 
+	// The assistant being on during play marks the game as assisted.
+	useEffect(() => {
+		if (assist && state.status === 'playing') noteAssist();
+	}, [assist, state.status, noteAssist]);
+
 	const result = useMemo(
 		() =>
 			assist && state.status === 'playing'
@@ -121,9 +127,7 @@ export default function App({ connector }: { connector?: Connector }) {
 
 	const resumeSaved = () => {
 		if (!pendingConfig) return;
-		const saved = loadGame(pendingConfig);
-		if (saved) game.loadRecord(saved);
-		else game.restart(pendingConfig);
+		resume(pendingConfig);
 		setPendingConfig(null);
 	};
 
@@ -164,7 +168,12 @@ export default function App({ connector }: { connector?: Connector }) {
 					})
 				}
 				onSelectConfig={selectConfig}
-				onUndo={() => act(() => game.undo())}
+				onUndo={() =>
+					act(() => {
+						noteAssist(); // undoing counts as an assist
+						game.undo();
+					})
+				}
 				onRedo={() => act(() => game.redo())}
 				onTheme={chooseTheme}
 				onMultiplayer={() => setLauncherOpen(true)}
@@ -201,15 +210,22 @@ export default function App({ connector }: { connector?: Connector }) {
 						</>
 					) : (
 						<>
-							<BoardView
-								board={state.board}
-								status={state.status}
-								lastReveal={state.lastReveal}
-								highlight={highlight}
-								onReveal={reveal}
-								onChord={chord}
-								onToggleFlag={toggleFlag}
-							/>
+							{/* Every raw pointer-down counts toward the click
+							    ratio, no-ops included. */}
+							<div
+								style={{ display: 'contents' }}
+								onPointerDownCapture={noteClick}
+							>
+								<BoardView
+									board={state.board}
+									status={state.status}
+									lastReveal={state.lastReveal}
+									highlight={highlight}
+									onReveal={reveal}
+									onChord={chord}
+									onToggleFlag={toggleFlag}
+								/>
+							</div>
 							{state.status === 'won' && (
 								<p className="banner banner-won">Cleared! 🎉</p>
 							)}
