@@ -17,7 +17,15 @@ import ThemedSelect from './components/ThemedSelect';
 import Toolbar from './components/Toolbar';
 import type { Highlight } from './highlight';
 import { hasSave, loadGame, loadLastConfig } from './persistence';
-import { THEMES, applyTheme, loadTheme, type ThemeName } from './theme';
+import {
+	THEMES,
+	applyTheme,
+	hasStoredTheme,
+	loadTheme,
+	saveTheme,
+	systemTheme,
+	type ThemeName,
+} from './theme';
 import useGame from './useGame';
 import useReplay from './useReplay';
 import './styles.css';
@@ -56,6 +64,21 @@ export default function App({ connector }: { connector?: Connector }) {
 
 	useEffect(() => applyTheme(theme), [theme]);
 
+	// Until the player picks a theme, follow the OS light/dark setting.
+	useEffect(() => {
+		const query = window.matchMedia('(prefers-color-scheme: dark)');
+		const onChange = () => {
+			if (!hasStoredTheme()) setTheme(systemTheme());
+		};
+		query.addEventListener('change', onChange);
+		return () => query.removeEventListener('change', onChange);
+	}, []);
+
+	const chooseTheme = (next: ThemeName) => {
+		saveTheme(next);
+		setTheme(next);
+	};
+
 	const result = useMemo(
 		() =>
 			assist && state.status === 'playing'
@@ -88,6 +111,7 @@ export default function App({ connector }: { connector?: Connector }) {
 
 	const selectConfig = (config: GameConfig) => {
 		setHighlight(null);
+		replay.stop(); // picking a board always returns to live play
 		if (configKey(config) !== configKey(state.config) && hasSave(config)) {
 			setPendingConfig(config);
 		} else {
@@ -119,7 +143,7 @@ export default function App({ connector }: { connector?: Connector }) {
 							ariaLabel="Theme"
 							value={theme}
 							items={THEMES}
-							onValueChange={setTheme}
+							onValueChange={chooseTheme}
 						/>
 					</div>
 				</header>
@@ -133,11 +157,16 @@ export default function App({ connector }: { connector?: Connector }) {
 			<Toolbar
 				state={state}
 				theme={theme}
-				onRestart={() => act(() => game.restart())}
+				onRestart={() =>
+					act(() => {
+						replay.stop();
+						game.restart();
+					})
+				}
 				onSelectConfig={selectConfig}
 				onUndo={() => act(() => game.undo())}
 				onRedo={() => act(() => game.redo())}
-				onTheme={setTheme}
+				onTheme={chooseTheme}
 				onMultiplayer={() => setLauncherOpen(true)}
 			/>
 
