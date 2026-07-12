@@ -54,7 +54,7 @@ export default class GuestSession extends Session {
 			case 'lobby': {
 				this.phase = 'lobby';
 				this.players = [...message.players];
-				this.settings = message.settings;
+				this.applySettings(message.settings);
 				this.winnerId = null;
 				this.progress.clear();
 				this.commit();
@@ -66,7 +66,7 @@ export default class GuestSession extends Session {
 				break;
 			}
 			case 'start': {
-				this.settings = message.settings;
+				this.applySettings(message.settings);
 				this.phase = 'playing';
 				this.winnerId = null;
 				this.progress.clear();

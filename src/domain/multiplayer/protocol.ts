@@ -14,13 +14,18 @@ export interface MatchSettings {
 	readonly mode: MatchMode;
 	readonly allowUndo: boolean;
 	readonly allowAssistant: boolean;
+	/** Auto-play forced flags/reveals (see AutoOptions) for everyone. */
+	readonly autoFlag: boolean;
+	readonly autoReveal: boolean;
 }
 
 export const DEFAULT_SETTINGS: MatchSettings = {
 	config: PRESETS.beginner,
 	mode: 'coop',
 	allowUndo: false,
-	allowAssistant: true,
+	allowAssistant: false,
+	autoFlag: false,
+	autoReveal: false,
 };
 
 export interface Player {

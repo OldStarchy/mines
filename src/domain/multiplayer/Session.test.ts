@@ -127,6 +127,21 @@ describe('multiplayer sessions', () => {
 			expect(boardOf(bob)).toEqual(boardOf(host));
 		});
 
+		test('auto options apply to the shared game and its replicas', () => {
+			const { host, bob } = trio();
+			host.setSettings({ autoFlag: true, autoReveal: true });
+			host.start();
+
+			bob.dispatch({ type: 'reveal', index: { x: 4, y: 4 } });
+
+			// Whatever the auto pass played, every replica ran the same
+			// pass and the move logs stay identical.
+			expect(bob.game.getRecord().moves).toEqual(
+				host.game.getRecord().moves,
+			);
+			expect(boardOf(bob)).toEqual(boardOf(host));
+		});
+
 		test('restart events never replicate', () => {
 			const { host, bob } = trio();
 			host.start();

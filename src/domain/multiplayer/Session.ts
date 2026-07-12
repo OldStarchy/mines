@@ -44,8 +44,18 @@ export default abstract class Session {
 	) {
 		this.settings = settings;
 		this.game = new Game(settings.config);
+		this.applySettings(settings);
 		this.state = this.buildState();
 		this.game.subscribe(() => this.reportProgress());
+	}
+
+	/** Adopts new settings, keeping the game's auto options in step. */
+	protected applySettings(settings: MatchSettings) {
+		this.settings = settings;
+		this.game.setAuto({
+			autoFlag: settings.autoFlag,
+			autoReveal: settings.autoReveal,
+		});
 	}
 
 	private buildState(): SessionState {

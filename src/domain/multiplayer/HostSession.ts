@@ -33,7 +33,7 @@ export default class HostSession extends Session {
 
 	setSettings(patch: Partial<MatchSettings>) {
 		if (this.phase !== 'lobby') return;
-		this.settings = { ...this.settings, ...patch };
+		this.applySettings({ ...this.settings, ...patch });
 		this.broadcastLobby();
 		this.commit();
 	}
@@ -47,8 +47,13 @@ export default class HostSession extends Session {
 		let record: string | null = null;
 		if (this.settings.mode === 'competitive') {
 			// The game makes the first click itself so every player gets
-			// the same board with the same safe opening.
+			// the same board with the same safe opening (auto options
+			// included, so the shared record starts at their fixpoint).
 			const opener = new Game(this.settings.config);
+			opener.setAuto({
+				autoFlag: this.settings.autoFlag,
+				autoReveal: this.settings.autoReveal,
+			});
 			opener.reveal({
 				x: Math.floor(Math.random() * this.settings.config.width),
 				y: Math.floor(Math.random() * this.settings.config.height),

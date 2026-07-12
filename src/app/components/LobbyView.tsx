@@ -3,7 +3,10 @@ import { useState } from 'react';
 import { PRESETS, type PresetName } from '../../domain/game/Game';
 import HostSession from '../../domain/multiplayer/HostSession';
 import type Session from '../../domain/multiplayer/Session';
-import type { MatchMode } from '../../domain/multiplayer/protocol';
+import type {
+	MatchMode,
+	MatchSettings,
+} from '../../domain/multiplayer/protocol';
 import { useSessionState } from '../useSession';
 import ScenarioDialog from './ScenarioDialog';
 import ThemedSelect from './ThemedSelect';
@@ -32,6 +35,40 @@ function SettingRow({
 			<span className="setting-label">{label}</span>
 			{children}
 		</div>
+	);
+}
+
+type ToggleName = 'allowUndo' | 'allowAssistant' | 'autoFlag' | 'autoReveal';
+
+/** A boolean match setting: a switch for the host, a label for guests. */
+function ToggleSetting({
+	label,
+	setting,
+	host,
+	settings,
+}: {
+	label: string;
+	setting: ToggleName;
+	host: HostSession | null;
+	settings: MatchSettings;
+}) {
+	return (
+		<SettingRow label={label}>
+			{host ? (
+				<Switch.Root
+					className="switch"
+					checked={settings[setting]}
+					onCheckedChange={(value) =>
+						host.setSettings({ [setting]: value })
+					}
+					aria-label={label}
+				>
+					<Switch.Thumb className="switch-thumb" />
+				</Switch.Root>
+			) : (
+				<span>{settings[setting] ? 'On' : 'Off'}</span>
+			)}
+		</SettingRow>
 	);
 }
 
@@ -153,39 +190,34 @@ export default function LobbyView({
 					)}
 				</SettingRow>
 
-				<SettingRow label="Undo">
-					{host ? (
-						<Switch.Root
-							className="switch"
-							checked={settings.allowUndo}
-							onCheckedChange={(allowUndo) =>
-								host.setSettings({ allowUndo })
-							}
-							aria-label="Allow undo"
-						>
-							<Switch.Thumb className="switch-thumb" />
-						</Switch.Root>
-					) : (
-						<span>{settings.allowUndo ? 'Allowed' : 'Off'}</span>
-					)}
-				</SettingRow>
-
-				<SettingRow label="Assistant">
-					{host ? (
-						<Switch.Root
-							className="switch"
-							checked={settings.allowAssistant}
-							onCheckedChange={(allowAssistant) =>
-								host.setSettings({ allowAssistant })
-							}
-							aria-label="Allow assistant"
-						>
-							<Switch.Thumb className="switch-thumb" />
-						</Switch.Root>
-					) : (
-						<span>{settings.allowAssistant ? 'Allowed' : 'Off'}</span>
-					)}
-				</SettingRow>
+				<ToggleSetting
+					label="Allow undo"
+					setting="allowUndo"
+					host={host}
+					settings={settings}
+				/>
+				<ToggleSetting
+					label="Allow assistant"
+					setting="allowAssistant"
+					host={host}
+					settings={settings}
+				/>
+				<ToggleSetting
+					label="Auto-flag"
+					setting="autoFlag"
+					host={host}
+					settings={settings}
+				/>
+				<ToggleSetting
+					label="Auto-reveal"
+					setting="autoReveal"
+					host={host}
+					settings={settings}
+				/>
+				<p className="lobby-hint">
+					Auto-flag places flags a number proves; auto-reveal chords
+					numbers already satisfied by their flags.
+				</p>
 			</div>
 
 			<div className="lobby-actions">
