@@ -3,14 +3,19 @@ import Board from '../Board';
 import Index2D from '../Index2D';
 import {
 	applyMove,
+	autoStep,
 	baseBoard,
 	boardsForRecord,
 	moveOrigin,
 	moveReveals,
 	revealedDiff,
+	withWinFlags,
+	type AutoOptions,
 	type GameRecord,
 	type Move,
 } from './GameRecord';
+
+export type { AutoOptions } from './GameRecord';
 
 export interface GameConfig {
 	readonly width: number;
@@ -97,6 +102,13 @@ export default class Game {
 	private boards: Board[] = [];
 	/** Undone moves available for redo, most-recent last. */
 	private future: Move[] = [];
+	private auto: AutoOptions = { autoFlag: false, autoReveal: false };
+	/**
+	 * Moves played by the auto pass rather than the player. Undo/redo
+	 * treat a player move and its auto follow-ups as one group. Not
+	 * serialized — a loaded record replays them as ordinary moves.
+	 */
+	private autoMoves = new WeakSet<Move>();
 	private memory = new Map<string, CellKnowledge>();
 	private startedAt: number | null = null;
 	private endedAt: number | null = null;
@@ -198,6 +210,41 @@ export default class Game {
 	}
 
 	/**
+	 * Enables/disables auto-play of forced follow-ups. Takes effect from
+	 * the next player move — the board is never changed by the toggle
+	 * itself, so switching mid-game is safe (and replicable).
+	 */
+	setAuto(auto: AutoOptions) {
+		this.auto = { ...auto };
+	}
+
+	/**
+	 * Plays forced follow-ups after a player move. Each pass lands as
+	 * one batch move (its own replay tick) marked as auto, so a single
+	 * undo reverts the player move together with everything it caused.
+	 */
+	private autoPass() {
+		if (!this.auto.autoFlag && !this.auto.autoReveal) return;
+		for (;;) {
+			const board = this.currentBoard();
+			if (this.deriveStatus(board) !== 'playing') return;
+			const step = autoStep(board, this.auto);
+			if (!step) return;
+			const move: Move = {
+				type: 'batch',
+				action: step.action,
+				indices: step.indices,
+			};
+			this.autoMoves.add(move);
+			this.pushMove(
+				move,
+				applyMove(board, move),
+				step.action === 'reveal' ? board : null,
+			);
+		}
+	}
+
+	/**
 	 * Fixes the mine layout before the game starts (multiplayer replicas
 	 * receive the host's layout this way). Ignored once a move exists;
 	 * calling again at move zero replaces the layout.
@@ -237,11 +284,9 @@ export default class Game {
 			if (this.seededMines) {
 				this.mines = [...this.seededMines];
 				const base = this.currentBoard();
-				this.pushMove(
-					{ type: 'reveal', index },
-					base.applyAction(Action.reveal(index)),
-					base,
-				);
+				const move: Move = { type: 'reveal', index };
+				this.pushMove(move, applyMove(base, move), base);
+				this.autoPass();
 				return;
 			}
 			const seeded = Board.ofSize(
@@ -253,20 +298,19 @@ export default class Game {
 			this.mines = seeded.mineKeys();
 			this.pushMove(
 				{ type: 'reveal', index },
-				seeded,
+				withWinFlags(seeded),
 				Board.ofSize(this.config.width, this.config.height),
 			);
+			this.autoPass();
 			return;
 		}
 
 		const cell = board.cells.atOrNull(index);
 		if (!cell || cell.state.type !== 'hidden') return;
 
-		this.pushMove(
-			{ type: 'reveal', index },
-			board.applyAction(Action.reveal(index)),
-			board,
-		);
+		const move: Move = { type: 'reveal', index };
+		this.pushMove(move, applyMove(board, move), board);
+		this.autoPass();
 	}
 
 	chord(at: Index2D) {
@@ -274,13 +318,14 @@ export default class Game {
 		const board = this.currentBoard();
 		if (this.deriveStatus(board) !== 'playing') return;
 
-		const next = board.applyAction(Action.chord(index));
+		const next = applyMove(board, { type: 'chord', index });
 		const revealed = revealedDiff(board, next).length > 0;
 		const flagged = next.flagCount !== board.flagCount;
 		// A chord that neither reveals nor flags anything isn't a move.
 		if (!revealed && !flagged) return;
 
 		this.pushMove({ type: 'chord', index }, next, revealed ? board : null);
+		this.autoPass();
 	}
 
 	/**
@@ -300,6 +345,7 @@ export default class Game {
 		if (!revealed && next.flagCount === board.flagCount) return;
 
 		this.pushMove(move, next, revealed ? board : null);
+		this.autoPass();
 	}
 
 	toggleFlag(at: Index2D) {
@@ -316,18 +362,37 @@ export default class Game {
 				board.applyAction(Action.flag(index)),
 				null,
 			);
+			this.autoPass();
 		} else if (cell.state.type === 'flagged') {
 			this.pushMove(
 				{ type: 'unflag', index },
 				board.applyAction(Action.unflag(index)),
 				null,
 			);
+			this.autoPass();
 		}
 	}
 
+	/**
+	 * Undoes the last player move together with any auto-played
+	 * follow-ups above it — one undo per player intent.
+	 */
 	undo() {
 		if (this.boards.length === 0) return;
 
+		while (
+			this.moves.length > 1 &&
+			this.autoMoves.has(this.moves[this.moves.length - 1])
+		) {
+			this.undoOne();
+		}
+		this.undoOne();
+
+		this.lastReveal = null;
+		this.commit();
+	}
+
+	private undoOne() {
 		const undoneBoard = this.boards.pop()!;
 		const move = this.moves.pop()!;
 		this.future.push(move);
@@ -340,31 +405,33 @@ export default class Game {
 				this.memory.set(key, cell.isBomb ? 'mine' : 'safe');
 			}
 		}
+	}
 
-		this.lastReveal = null;
+	/** Redoes one player move and its auto-played follow-ups. */
+	redo() {
+		if (this.future.length === 0) return;
+
+		const before = this.currentBoard();
+		const first = this.future[this.future.length - 1];
+		do {
+			this.redoOne();
+		} while (
+			this.future.length > 0 &&
+			this.autoMoves.has(this.future[this.future.length - 1])
+		);
+
+		const revealed = revealedDiff(before, this.currentBoard());
+		this.lastReveal =
+			revealed.length > 0
+				? { origin: moveOrigin(first), revealed }
+				: null;
 		this.commit();
 	}
 
-	redo() {
-		const move = this.future.pop();
-		if (!move) return;
-
-		const board = this.currentBoard();
-		const next = boardsForRecord({
-			config: this.config,
-			mines: this.mines,
-			moves: [...this.moves, move],
-		}).at(-1)!;
-
+	private redoOne() {
+		const move = this.future.pop()!;
 		this.moves.push(move);
-		this.boards.push(next);
-		this.lastReveal = moveReveals(move)
-			? {
-					origin: moveOrigin(move),
-					revealed: revealedDiff(board, next),
-				}
-			: null;
-		this.commit();
+		this.boards.push(applyMove(this.currentBoard(), move));
 	}
 
 	restart(config?: GameConfig) {

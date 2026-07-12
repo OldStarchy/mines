@@ -104,6 +104,22 @@ describe('Game', () => {
 		expect(game.getState().endedAt).not.toBeNull();
 	});
 
+	test('winning auto-flags the remaining mines', () => {
+		const game = pocketGame();
+
+		// (0,0) is the last safe cell; the three mines are still hidden.
+		game.reveal({ x: 0, y: 0 });
+
+		const state = game.getState();
+		expect(state.status).toBe('won');
+		expect(state.board.flagCount).toBe(3);
+
+		// The flags are derived, not recorded: undo returns to the
+		// unflagged pre-win board.
+		game.undo();
+		expect(game.getState().board.flagCount).toBe(0);
+	});
+
 	test('tracks the last reveal for flood-fill animation', () => {
 		const game = new Game(PRESETS.beginner);
 		expect(game.getState().lastReveal).toBeNull();
@@ -242,6 +258,62 @@ describe('Game', () => {
 
 			game.reveal({ x: 4, y: 4 });
 			expect(game.getState().status).not.toBe('lost');
+		});
+	});
+
+	describe('auto options', () => {
+		test('auto-flag flags forced mines, undone together with the trigger', () => {
+			const game = pocketGame();
+			game.setAuto({ autoFlag: true, autoReveal: false });
+
+			// Any move triggers the pass; every number sees its hidden
+			// neighbors are exactly its missing mines.
+			game.toggleFlag({ x: 0, y: 0 });
+
+			const state = game.getState();
+			expect(state.board.flagCount).toBe(4); // player flag + 3 mines
+			expect(state.moveCount).toBe(3); // reveal, flag, auto batch
+
+			game.undo();
+			expect(game.getState().board.flagCount).toBe(0);
+			expect(game.getState().moveCount).toBe(1);
+
+			game.redo();
+			expect(game.getState().board.flagCount).toBe(4);
+			expect(game.getState().moveCount).toBe(3);
+		});
+
+		test('auto-reveal plays out satisfied numbers until the fixpoint', () => {
+			// 3x3, one mine: flagging it satisfies the 1 at (0,0), and the
+			// reveals cascade number by number to a win.
+			const game = new Game();
+			game.loadRecord({
+				config: { width: 3, height: 3, bombs: 1 },
+				mines: ['1,0'],
+				moves: [{ type: 'reveal', index: { x: 0, y: 0 } }],
+			});
+			game.setAuto({ autoFlag: false, autoReveal: true });
+
+			game.toggleFlag({ x: 1, y: 0 });
+
+			expect(game.getState().status).toBe('won');
+		});
+
+		test('auto moves replay from a record like any other move', () => {
+			const game = pocketGame();
+			game.setAuto({ autoFlag: true, autoReveal: false });
+			game.toggleFlag({ x: 0, y: 0 });
+
+			const replica = new Game();
+			replica.loadRecord(game.getRecord());
+			expect(replica.getState().board.flagCount).toBe(4);
+		});
+
+		test('auto options off by default: nothing is played for you', () => {
+			const game = pocketGame();
+			game.toggleFlag({ x: 0, y: 0 });
+			expect(game.getState().board.flagCount).toBe(1);
+			expect(game.getState().moveCount).toBe(2);
 		});
 	});
 

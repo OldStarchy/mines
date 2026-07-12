@@ -1,6 +1,7 @@
 import Action from '../Action';
 import Board from '../Board';
 import Index2D from '../Index2D';
+import Range2D from '../Range2D';
 import type { GameConfig } from './Game';
 
 /** A single semantic move a player can make. One move = one replay tick. */
@@ -39,24 +40,90 @@ export function emptyRecord(config: GameConfig): GameRecord {
 export function applyMove(board: Board, move: Move): Board {
 	switch (move.type) {
 		case 'reveal':
-			return board.applyAction(Action.reveal(move.index));
+			return withWinFlags(board.applyAction(Action.reveal(move.index)));
 		case 'chord':
-			return board.applyAction(Action.chord(move.index));
+			return withWinFlags(board.applyAction(Action.chord(move.index)));
 		case 'flag':
 			return board.applyAction(Action.flag(move.index));
 		case 'unflag':
 			return board.applyAction(Action.unflag(move.index));
 		case 'batch':
-			return move.indices.reduce(
-				(b, index) =>
-					b.applyAction(
-						move.action === 'flag'
-							? Action.flag(index)
-							: Action.reveal(index),
-					),
-				board,
+			return withWinFlags(
+				move.indices.reduce(
+					(b, index) =>
+						b.applyAction(
+							move.action === 'flag'
+								? Action.flag(index)
+								: Action.reveal(index),
+						),
+					board,
+				),
 			);
 	}
+}
+
+/**
+ * A won board flags its remaining hidden cells (all mines by
+ * definition) — the classic end-of-game auto-flag. Applied to every
+ * move's result, so replay, undo snapshots and multiplayer replicas
+ * agree without recording extra moves.
+ */
+export function withWinFlags(board: Board): Board {
+	if (!board.isWon) return board;
+	return board.cells
+		.toArray()
+		.filter((cell) => cell.state.type === 'hidden')
+		.reduce((b, cell) => b.applyAction(Action.flag(cell)), board);
+}
+
+/** Which forced follow-ups the game plays by itself after each move. */
+export interface AutoOptions {
+	/** Flag cells some revealed number proves must be mines. */
+	readonly autoFlag: boolean;
+	/** Reveal neighbors of numbers already satisfied by their flags. */
+	readonly autoReveal: boolean;
+}
+
+/**
+ * One step of the auto-play pass, or null at the fixpoint. Flags come
+ * first — new flags are what satisfy numbers and enable reveals. Both
+ * follow the flags on the board, right or wrong, exactly like a chord.
+ */
+export function autoStep(
+	board: Board,
+	options: AutoOptions,
+): { action: 'flag' | 'reveal'; indices: Index2D[] } | null {
+	const flags = new Map<string, Index2D>();
+	const reveals = new Map<string, Index2D>();
+
+	for (const cell of board.cells.toArray()) {
+		if (cell.state.type !== 'revealed' || cell.isBomb) continue;
+		if (cell.state.number === 0) continue;
+
+		const neighbors = board.cells
+			.slice(Range2D.around(cell))
+			.toArray()
+			.filter((c) => c !== cell);
+		const flagged = neighbors.filter(
+			(c) => c.state.type === 'flagged',
+		).length;
+		const hidden = neighbors.filter((c) => c.state.type === 'hidden');
+		if (hidden.length === 0) continue;
+
+		const target =
+			options.autoFlag && flagged + hidden.length === cell.state.number
+				? flags
+				: options.autoReveal && flagged === cell.state.number
+					? reveals
+					: null;
+		if (!target) continue;
+		for (const c of hidden) target.set(Index2D.key(c), { x: c.x, y: c.y });
+	}
+
+	if (flags.size > 0) return { action: 'flag', indices: [...flags.values()] };
+	if (reveals.size > 0)
+		return { action: 'reveal', indices: [...reveals.values()] };
+	return null;
 }
 
 /** Whether a move can reveal cells (and so can start a reveal wave). */
