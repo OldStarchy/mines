@@ -12,6 +12,7 @@ import {
 	saveLastConfig,
 	type SaveMeta,
 } from './persistence';
+import { recordOutcome, recordStart } from './stats';
 
 function elapsedMs(state: GameState): number {
 	if (state.startedAt === null) return 0;
@@ -39,6 +40,8 @@ export default function useGame(initialConfig: GameConfig): {
 	const gameRef = useRef<Game | null>(null);
 	const clicksRef = useRef(0);
 	const assistedRef = useRef(false);
+	/** Whether this game's outcome already went into the statistics. */
+	const countedRef = useRef(false);
 
 	const restore = useCallback((game: Game, config: GameConfig): boolean => {
 		const saved = loadGame(config);
@@ -47,6 +50,7 @@ export default function useGame(initialConfig: GameConfig): {
 		game.loadRecord(saved, meta?.elapsed ?? 0);
 		clicksRef.current = meta?.clicks ?? 0;
 		assistedRef.current = meta?.assisted ?? false;
+		countedRef.current = meta?.counted ?? false;
 		return true;
 	}, []);
 
@@ -69,26 +73,61 @@ export default function useGame(initialConfig: GameConfig): {
 			status: game.getState().status,
 			clicks: clicksRef.current,
 			assisted: assistedRef.current,
+			counted: countedRef.current,
 		}),
 		[game],
 	);
 
 	const previousStatus = useRef(state.status);
+	const previousCanRedo = useRef(state.canRedo);
 	useEffect(() => {
+		const previous = previousStatus.current;
+		previousStatus.current = state.status;
+		const couldRedo = previousCanRedo.current;
+		previousCanRedo.current = state.canRedo;
+
 		// A fresh board starts fresh meta. Undo back to move zero keeps
 		// it (canRedo) — that is still the same session, and the undo
 		// already marked it assisted.
-		if (
-			state.status === 'idle' &&
-			previousStatus.current !== 'idle' &&
-			!state.canRedo
-		) {
+		if (state.status === 'idle' && previous !== 'idle' && !state.canRedo) {
 			clicksRef.current = 0;
 			assistedRef.current = false;
+			countedRef.current = false;
 		}
-		previousStatus.current = state.status;
 
-		saveGame(game.getRecord(), meta());
+		// Statistics: count a game when its first move lands (redoing
+		// back from move zero is not a new game), and its outcome once.
+		if (state.status === 'playing' && previous === 'idle' && !couldRedo) {
+			recordStart(state.config);
+		}
+		if (
+			(state.status === 'won' || state.status === 'lost') &&
+			previous === 'playing' &&
+			!countedRef.current
+		) {
+			countedRef.current = true;
+			recordOutcome(state.config, state.status, game.getRecord(), meta());
+		}
+
+		// Wiping the slot for a fresh board discards any unfinished,
+		// uncounted game still stored there: that game was abandoned.
+		const record = game.getRecord();
+		if (record.moves.length === 0 && !state.canRedo) {
+			const oldMeta = loadMeta(state.config);
+			if (oldMeta && oldMeta.status === 'playing' && !oldMeta.counted) {
+				const oldRecord = loadGame(state.config);
+				if (oldRecord) {
+					recordOutcome(
+						state.config,
+						'abandoned',
+						oldRecord,
+						oldMeta,
+					);
+				}
+			}
+		}
+
+		saveGame(record, meta());
 		saveLastConfig(state.config);
 	}, [game, state, meta]);
 

@@ -24,6 +24,8 @@ export interface SaveMeta {
 	readonly clicks: number;
 	/** The assistant was on, or undo was used, at some point. */
 	readonly assisted: boolean;
+	/** This game's outcome already went into the statistics. */
+	readonly counted: boolean;
 }
 
 function safeGet(key: string): string | null {

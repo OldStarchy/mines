@@ -309,6 +309,8 @@ export default function BoardViewport({
 		if (pan.current?.id === event.pointerId) pan.current = null;
 	};
 
+	// Also on auxclick: a middle-drag pan ends in one, and a stale
+	// suppression flag would swallow the next real click instead.
 	const onClickCapture = (event: React.MouseEvent) => {
 		if (!suppressClick.current) return;
 		suppressClick.current = false;
@@ -339,6 +341,7 @@ export default function BoardViewport({
 				onPointerUp={onPointerEnd}
 				onPointerCancel={onPointerEnd}
 				onClickCapture={onClickCapture}
+				onAuxClickCapture={onClickCapture}
 			>
 				<div
 					ref={canvasRef}

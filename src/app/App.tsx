@@ -121,11 +121,6 @@ export default function App({ connector }: { connector?: Connector }) {
 		action();
 	};
 
-	// Clicks that land on the board (not the floating controls) count
-	// toward the click ratio, no-ops included.
-	const noteBoardClick = (event: React.MouseEvent) => {
-		if ((event.target as Element).closest('.board')) noteClick();
-	};
 	const reveal = (cell: Cell) => act(() => game.reveal(cell));
 	const chord = (cell: Cell) => act(() => game.chord(cell));
 	const toggleFlag = (cell: Cell) => act(() => game.toggleFlag(cell));
@@ -239,22 +234,25 @@ export default function App({ connector }: { connector?: Connector }) {
 						</>
 					) : (
 						<>
-							{/* Bubbling here means the viewport did not
-							    swallow the click as a pan gesture. */}
-							<div
-								style={{ display: 'contents' }}
-								onClick={noteBoardClick}
-								onAuxClick={noteBoardClick}
-								onContextMenu={noteBoardClick}
+							<BoardViewport
+								showControls={settings.showBoardControls}
+								extraControls={
+									<FlagModeToggle
+										flagMode={flagMode}
+										onChange={setFlagMode}
+									/>
+								}
 							>
-								<BoardViewport
-									showControls={settings.showBoardControls}
-									extraControls={
-										<FlagModeToggle
-											flagMode={flagMode}
-											onChange={setFlagMode}
-										/>
-									}
+								{/* Board clicks count toward the click ratio,
+								    no-ops included. Capture phase: the count
+								    lands before the cell ends the game, and
+								    the viewport has already swallowed clicks
+								    that were pan gestures. */}
+								<div
+									style={{ display: 'contents' }}
+									onClickCapture={noteClick}
+									onAuxClickCapture={noteClick}
+									onContextMenuCapture={noteClick}
 								>
 									<BoardView
 										board={state.board}
@@ -266,8 +264,8 @@ export default function App({ connector }: { connector?: Connector }) {
 										onChord={chord}
 										onToggleFlag={toggleFlag}
 									/>
-								</BoardViewport>
-							</div>
+								</div>
+							</BoardViewport>
 							{state.status === 'won' && (
 								<p className="banner banner-won">Cleared! 🎉</p>
 							)}

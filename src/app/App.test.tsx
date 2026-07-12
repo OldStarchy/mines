@@ -1,6 +1,7 @@
 import { page } from 'vitest/browser';
 import { beforeEach, describe, expect, test } from 'vitest';
 import { render } from 'vitest-browser-react';
+import { serializeRecord } from '../domain/game/GameRecord';
 import App from './App';
 
 describe('App', () => {
@@ -198,6 +199,42 @@ describe('App', () => {
 			JSON.parse(localStorage.getItem('mines.settings')!)
 				.showBoardControls,
 		).toBe(false);
+	});
+
+	test('winning a game puts it on the scoreboard', async () => {
+		// Resume a deterministic 5x5 one click away from winning: three
+		// mines pocket the (0,0) corner, everything else is revealed.
+		const config = { width: 5, height: 5, bombs: 3 };
+		localStorage.setItem('mines.lastConfig', JSON.stringify(config));
+		localStorage.setItem(
+			'mines.save.5x5x3',
+			serializeRecord({
+				config,
+				mines: ['1,0', '0,1', '1,1'],
+				moves: [{ type: 'reveal', index: { x: 4, y: 4 } }],
+			}),
+		);
+
+		render(<App />);
+		await expect.element(page.getByText('Mines Lab')).toBeVisible();
+
+		(document.querySelector('[data-cell="0,0"]') as HTMLElement).click();
+		await expect.element(page.getByText('Cleared!', { exact: false })).toBeVisible();
+
+		// Auto-flag on win dressed the three mines with flags.
+		await expect
+			.element(page.getByTitle('Mines minus flags'))
+			.toHaveTextContent('000');
+
+		await page.getByRole('button', { name: 'Statistics' }).click();
+		await expect.element(page.getByText('Best times')).toBeVisible();
+
+		// One win, unassisted, at a 1-click / 3-mine ratio of 0.33.
+		const stats = JSON.parse(localStorage.getItem('mines.stats')!)['5x5x3'];
+		expect(stats.won).toBe(1);
+		expect(stats.board).toHaveLength(1);
+		expect(stats.board[0].assisted).toBe(false);
+		await expect.element(page.getByText('0.33')).toBeVisible();
 	});
 
 	test('restores the saved game after a remount', async () => {

@@ -8,10 +8,14 @@ import { configKey } from '../../domain/game/scenario';
 import { hasSaveInProgress } from '../persistence';
 import { THEMES, type ThemeName } from '../theme';
 import type { AppSettings } from '../settings';
+import { PRESET_LABELS, presetOf } from './presets';
 import ScenarioDialog from './ScenarioDialog';
 import SettingsDialog from './SettingsDialog';
+import StatsDialog from './StatsDialog';
 import ThemedSelect from './ThemedSelect';
 import Timer from './Timer';
+
+export { PRESET_LABELS, presetOf } from './presets';
 
 const FACES = {
 	idle: '🙂',
@@ -19,23 +23,6 @@ const FACES = {
 	won: '😎',
 	lost: '😵',
 } as const;
-
-export const PRESET_LABELS: Record<PresetName, string> = {
-	beginner: 'Beginner 9×9',
-	intermediate: 'Intermediate 16×16',
-	expert: 'Expert 30×16',
-};
-
-export function presetOf(config: GameConfig): PresetName | null {
-	return (
-		(Object.keys(PRESETS) as PresetName[]).find(
-			(name) =>
-				PRESETS[name].width === config.width &&
-				PRESETS[name].height === config.height &&
-				PRESETS[name].bombs === config.bombs,
-		) ?? null
-	);
-}
 
 export default function Toolbar({
 	state,
@@ -150,6 +137,7 @@ export default function Toolbar({
 					items={THEMES}
 					onValueChange={onTheme}
 				/>
+				<StatsDialog config={state.config} />
 				<SettingsDialog settings={settings} onChange={onSettings} />
 			</div>
 		</header>
