@@ -17,6 +17,7 @@ export default function BoardView({
 	lastReveal,
 	highlight,
 	interactive = true,
+	flagMode = false,
 	/** Scales the flood-fill wave; 1 is normal, lower is faster (replay). */
 	waveScale = 1,
 	onReveal = noop,
@@ -28,6 +29,7 @@ export default function BoardView({
 	lastReveal: GameState['lastReveal'];
 	highlight: Highlight | null;
 	interactive?: boolean;
+	flagMode?: boolean;
 	waveScale?: number;
 	onReveal?: (cell: Cell) => void;
 	onChord?: (cell: Cell) => void;
@@ -71,6 +73,7 @@ export default function BoardView({
 					revealDelay={revealDelays?.get(Index2D.key(cell))}
 					revealDuration={revealDuration}
 					interactive={interactive}
+					flagMode={flagMode}
 					onReveal={onReveal}
 					onChord={onChord}
 					onToggleFlag={onToggleFlag}

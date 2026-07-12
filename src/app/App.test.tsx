@@ -138,6 +138,68 @@ describe('App', () => {
 		).toBe(false);
 	});
 
+	test('flag mode swaps the primary click to flagging', async () => {
+		render(<App />);
+		await expect.element(page.getByText('Mines Lab')).toBeVisible();
+
+		(document.querySelector('[data-cell="4,4"]') as HTMLElement).click();
+		await expect
+			.element(page.getByTitle('Mines minus flags'))
+			.toHaveTextContent('010');
+
+		await page.getByRole('button', { name: 'Flag mode' }).click();
+
+		const key = (document.querySelector('.cell-hidden') as HTMLElement)
+			.dataset.cell!;
+		const cell = () =>
+			document.querySelector(`[data-cell="${key}"]`) as HTMLElement;
+
+		cell().click(); // left click now flags…
+		await expect
+			.element(page.getByTitle('Mines minus flags'))
+			.toHaveTextContent('009');
+
+		cell().click(); // …and toggles the flag back off
+		await expect
+			.element(page.getByTitle('Mines minus flags'))
+			.toHaveTextContent('010');
+	});
+
+	test('zoom controls rescale the board canvas', async () => {
+		render(<App />);
+		await expect.element(page.getByText('Mines Lab')).toBeVisible();
+
+		const canvas = () =>
+			document.querySelector('.board-canvas') as HTMLElement;
+		expect(canvas().style.transform).toContain('scale(1)');
+
+		await page.getByTitle('Zoom in').click();
+		expect(canvas().style.transform).toContain('scale(1.25)');
+
+		await page.getByTitle('Fit board to view').click();
+		expect(canvas().style.transform).toContain('scale(1)');
+	});
+
+	test('settings persist and hide the floating controls', async () => {
+		render(<App />);
+		await expect.element(page.getByText('Mines Lab')).toBeVisible();
+		await expect
+			.element(page.getByRole('button', { name: 'Flag mode' }))
+			.toBeVisible();
+
+		await page.getByRole('button', { name: 'Settings' }).click();
+		await page.getByLabelText('Floating board controls').click();
+		await page.getByRole('button', { name: 'Done' }).click();
+
+		await expect
+			.element(page.getByRole('button', { name: 'Flag mode' }))
+			.not.toBeInTheDocument();
+		expect(
+			JSON.parse(localStorage.getItem('mines.settings')!)
+				.showBoardControls,
+		).toBe(false);
+	});
+
 	test('restores the saved game after a remount', async () => {
 		const first = await render(<App />);
 		await expect.element(page.getByText('Mines Lab')).toBeVisible();

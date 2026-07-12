@@ -1,0 +1,60 @@
+/* Pannable/zoomable window onto the board, plus the floating controls. */
+
+.board-viewport {
+	position: relative;
+	overflow: hidden;
+	max-width: 100%;
+	max-height: 70vh;
+	border-radius: 6px;
+	/* all touch gestures are ours: tap plays, drag pans, pinch zooms */
+	touch-action: none;
+}
+
+.board-canvas {
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: max-content;
+	transform-origin: 0 0;
+}
+
+.board-fabs {
+	position: fixed;
+	left: 14px;
+	bottom: 14px;
+	z-index: 15;
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+.fab {
+	width: 44px;
+	height: 44px;
+	border-radius: 50%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font: inherit;
+	font-size: 18px;
+	line-height: 1;
+	cursor: pointer;
+	padding: 0;
+	color: var(--text);
+	background: var(--surface);
+	border: 2px solid var(--border);
+	box-shadow: 0 3px 10px rgba(0, 0, 0, 0.25);
+}
+
+.fab:active {
+	transform: scale(0.94);
+}
+
+.fab-mode {
+	font-size: 20px;
+}
+
+.fab-active {
+	outline: 3px solid var(--accent);
+	outline-offset: -1px;
+}

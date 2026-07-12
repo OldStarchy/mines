@@ -7,6 +7,8 @@ import type Session from '../domain/multiplayer/Session';
 import solve from '../domain/solver/Solver';
 import AssistantPanel from './components/AssistantPanel';
 import BoardView from './components/BoardView';
+import BoardViewport from './components/BoardViewport';
+import FlagModeToggle from './components/FlagModeToggle';
 import MultiplayerLauncher, {
 	type Connector,
 } from './components/MultiplayerLauncher';
@@ -17,6 +19,7 @@ import ThemedSelect from './components/ThemedSelect';
 import Toolbar from './components/Toolbar';
 import type { Highlight } from './highlight';
 import { hasSave, loadLastConfig } from './persistence';
+import { loadSettings, saveSettings, type AppSettings } from './settings';
 import {
 	THEMES,
 	applyTheme,
@@ -37,6 +40,8 @@ export default function App({ connector }: { connector?: Connector }) {
 	const { game, state, resume, noteClick, noteAssist } =
 		useGame(initialConfig);
 	const [theme, setTheme] = useState<ThemeName>(loadTheme);
+	const [settings, setSettings] = useState<AppSettings>(loadSettings);
+	const [flagMode, setFlagMode] = useState(false);
 	const [assist, setAssist] = useState(false);
 	/** Off by default: reasoning from undone reveals is meta-gaming. */
 	const [metaAssist, setMetaAssist] = useState(false);
@@ -85,6 +90,14 @@ export default function App({ connector }: { connector?: Connector }) {
 		if (assist && state.status === 'playing') noteAssist();
 	}, [assist, state.status, noteAssist]);
 
+	useEffect(() => {
+		saveSettings(settings);
+		game.setAuto({
+			autoFlag: settings.autoFlag,
+			autoReveal: settings.autoReveal,
+		});
+	}, [settings, game]);
+
 	const result = useMemo(
 		() =>
 			assist && state.status === 'playing'
@@ -106,6 +119,12 @@ export default function App({ connector }: { connector?: Connector }) {
 	const act = (action: () => void) => {
 		setHighlight(null);
 		action();
+	};
+
+	// Clicks that land on the board (not the floating controls) count
+	// toward the click ratio, no-ops included.
+	const noteBoardClick = (event: React.MouseEvent) => {
+		if ((event.target as Element).closest('.board')) noteClick();
 	};
 	const reveal = (cell: Cell) => act(() => game.reveal(cell));
 	const chord = (cell: Cell) => act(() => game.chord(cell));
@@ -151,7 +170,11 @@ export default function App({ connector }: { connector?: Connector }) {
 						/>
 					</div>
 				</header>
-				<MultiplayerView session={session} onLeave={leaveSession} />
+				<MultiplayerView
+					session={session}
+					showBoardControls={settings.showBoardControls}
+					onLeave={leaveSession}
+				/>
 			</div>
 		);
 	}
@@ -161,6 +184,8 @@ export default function App({ connector }: { connector?: Connector }) {
 			<Toolbar
 				state={state}
 				theme={theme}
+				settings={settings}
+				onSettings={setSettings}
 				onRestart={() =>
 					act(() => {
 						replay.stop();
@@ -198,33 +223,50 @@ export default function App({ connector }: { connector?: Connector }) {
 				<div className="board-area">
 					{replay.view ? (
 						<>
-							<BoardView
-								board={replay.view.board}
-								status={replay.view.status}
-								lastReveal={replay.view.lastReveal}
-								highlight={null}
-								interactive={false}
-								waveScale={Math.min(1, 1 / replay.view.aps)}
-							/>
+							<BoardViewport
+								showControls={settings.showBoardControls}
+							>
+								<BoardView
+									board={replay.view.board}
+									status={replay.view.status}
+									lastReveal={replay.view.lastReveal}
+									highlight={null}
+									interactive={false}
+									waveScale={Math.min(1, 1 / replay.view.aps)}
+								/>
+							</BoardViewport>
 							<ReplayControls replay={replay} />
 						</>
 					) : (
 						<>
-							{/* Every raw pointer-down counts toward the click
-							    ratio, no-ops included. */}
+							{/* Bubbling here means the viewport did not
+							    swallow the click as a pan gesture. */}
 							<div
 								style={{ display: 'contents' }}
-								onPointerDownCapture={noteClick}
+								onClick={noteBoardClick}
+								onAuxClick={noteBoardClick}
+								onContextMenu={noteBoardClick}
 							>
-								<BoardView
-									board={state.board}
-									status={state.status}
-									lastReveal={state.lastReveal}
-									highlight={highlight}
-									onReveal={reveal}
-									onChord={chord}
-									onToggleFlag={toggleFlag}
-								/>
+								<BoardViewport
+									showControls={settings.showBoardControls}
+									extraControls={
+										<FlagModeToggle
+											flagMode={flagMode}
+											onChange={setFlagMode}
+										/>
+									}
+								>
+									<BoardView
+										board={state.board}
+										status={state.status}
+										lastReveal={state.lastReveal}
+										highlight={highlight}
+										flagMode={flagMode}
+										onReveal={reveal}
+										onChord={chord}
+										onToggleFlag={toggleFlag}
+									/>
+								</BoardViewport>
 							</div>
 							{state.status === 'won' && (
 								<p className="banner banner-won">Cleared! 🎉</p>

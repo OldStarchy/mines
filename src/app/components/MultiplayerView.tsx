@@ -6,9 +6,11 @@ import MatchView from './MatchView';
 /** The whole multiplayer surface: lobby, match, and failure states. */
 export default function MultiplayerView({
 	session,
+	showBoardControls,
 	onLeave,
 }: {
 	session: Session;
+	showBoardControls: boolean;
 	onLeave: () => void;
 }) {
 	const state = useSessionState(session);
@@ -46,5 +48,11 @@ export default function MultiplayerView({
 		);
 	}
 
-	return <MatchView session={session} onLeave={onLeave} />;
+	return (
+		<MatchView
+			session={session}
+			showBoardControls={showBoardControls}
+			onLeave={onLeave}
+		/>
+	);
 }

@@ -7,7 +7,9 @@ import { PRESETS } from '../../domain/game/Game';
 import { configKey } from '../../domain/game/scenario';
 import { hasSaveInProgress } from '../persistence';
 import { THEMES, type ThemeName } from '../theme';
+import type { AppSettings } from '../settings';
 import ScenarioDialog from './ScenarioDialog';
+import SettingsDialog from './SettingsDialog';
 import ThemedSelect from './ThemedSelect';
 import Timer from './Timer';
 
@@ -38,20 +40,24 @@ export function presetOf(config: GameConfig): PresetName | null {
 export default function Toolbar({
 	state,
 	theme,
+	settings,
 	onRestart,
 	onSelectConfig,
 	onUndo,
 	onRedo,
 	onTheme,
+	onSettings,
 	onMultiplayer,
 }: {
 	state: GameState;
 	theme: ThemeName;
+	settings: AppSettings;
 	onRestart: () => void;
 	onSelectConfig: (config: GameConfig) => void;
 	onUndo: () => void;
 	onRedo: () => void;
 	onTheme: (theme: ThemeName) => void;
+	onSettings: (settings: AppSettings) => void;
 	onMultiplayer: () => void;
 }) {
 	const minesLeft = state.config.bombs - state.board.flagCount;
@@ -144,6 +150,7 @@ export default function Toolbar({
 					items={THEMES}
 					onValueChange={onTheme}
 				/>
+				<SettingsDialog settings={settings} onChange={onSettings} />
 			</div>
 		</header>
 	);

@@ -7,6 +7,7 @@
 @import './styles/controls.css';
 @import './styles/toolbar.css';
 @import './styles/board.css';
+@import './styles/viewport.css';
 @import './styles/replay.css';
 @import './styles/assistant.css';
 @import './styles/dialog.css';

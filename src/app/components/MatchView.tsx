@@ -13,6 +13,8 @@ import type { Highlight } from '../highlight';
 import { useGameState, useSessionState } from '../useSession';
 import AssistantPanel from './AssistantPanel';
 import BoardView from './BoardView';
+import BoardViewport from './BoardViewport';
+import FlagModeToggle from './FlagModeToggle';
 import Timer from './Timer';
 
 function progressLabel(progress: PlayerProgress | undefined): string {
@@ -57,15 +59,18 @@ function Scoreboard({ state }: { state: SessionState }) {
 
 export default function MatchView({
 	session,
+	showBoardControls,
 	onLeave,
 }: {
 	session: Session;
+	showBoardControls: boolean;
 	onLeave: () => void;
 }) {
 	const state = useSessionState(session);
 	const gameState = useGameState(session.game);
 	const [assist, setAssist] = useState(false);
 	const [metaAssist, setMetaAssist] = useState(false);
+	const [flagMode, setFlagMode] = useState(false);
 	const [highlight, setHighlight] = useState<Highlight | null>(null);
 
 	const { settings } = state;
@@ -168,15 +173,26 @@ export default function MatchView({
 					)}
 				</div>
 
-				<BoardView
-					board={gameState.board}
-					status={gameState.status}
-					lastReveal={gameState.lastReveal}
-					highlight={highlight}
-					onReveal={reveal}
-					onChord={chord}
-					onToggleFlag={toggleFlag}
-				/>
+				<BoardViewport
+					showControls={showBoardControls}
+					extraControls={
+						<FlagModeToggle
+							flagMode={flagMode}
+							onChange={setFlagMode}
+						/>
+					}
+				>
+					<BoardView
+						board={gameState.board}
+						status={gameState.status}
+						lastReveal={gameState.lastReveal}
+						highlight={highlight}
+						flagMode={flagMode}
+						onReveal={reveal}
+						onChord={chord}
+						onToggleFlag={toggleFlag}
+					/>
+				</BoardViewport>
 
 				{winner && (
 					<p className="banner banner-won">

@@ -27,6 +27,7 @@ function CellView({
 	revealDelay,
 	revealDuration,
 	interactive,
+	flagMode,
 	onReveal,
 	onChord,
 	onToggleFlag,
@@ -37,6 +38,8 @@ function CellView({
 	revealDelay: number | undefined;
 	revealDuration: number | undefined;
 	interactive: boolean;
+	/** Swaps the primary/secondary click actions: click flags, right-click digs. */
+	flagMode: boolean;
 	onReveal: (cell: Cell) => void;
 	onChord: (cell: Cell) => void;
 	onToggleFlag: (cell: Cell) => void;
@@ -68,12 +71,31 @@ function CellView({
 			data-cell={`${cell.x},${cell.y}`}
 			disabled={!interactive}
 			onClick={() => {
-				if (cell.state.type === 'hidden') onReveal(cell);
+				if (flagMode) {
+					if (
+						cell.state.type === 'hidden' ||
+						cell.state.type === 'flagged'
+					) {
+						onToggleFlag(cell);
+					}
+				} else if (cell.state.type === 'hidden') {
+					onReveal(cell);
+				}
+				// Taps chord here rather than on pointer-down, so that a
+				// touch drag pans the board without chording in passing.
+				// For the mouse the chord already ran; re-chording is a no-op.
+				if (revealedNumber) onChord(cell);
 			}}
 			// Chording happens on pointer-down so that keeping the button
 			// held and sweeping across numbers chords each one in passing.
 			onPointerDown={(event) => {
-				if (event.button === 0 && revealedNumber) onChord(cell);
+				if (
+					event.pointerType !== 'touch' &&
+					event.button === 0 &&
+					revealedNumber
+				) {
+					onChord(cell);
+				}
 			}}
 			onPointerOver={(event) => {
 				if (event.buttons === 1 && revealedNumber) onChord(cell);
@@ -87,7 +109,12 @@ function CellView({
 			}}
 			onContextMenu={(event) => {
 				event.preventDefault();
-				onToggleFlag(cell);
+				// The alternate action: flag normally, dig in flag mode.
+				if (flagMode) {
+					if (cell.state.type === 'hidden') onReveal(cell);
+				} else {
+					onToggleFlag(cell);
+				}
 			}}
 		>
 			{content(cell, status)}
