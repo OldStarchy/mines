@@ -274,28 +274,28 @@ describe('Game', () => {
 	});
 
 	describe('auto options', () => {
-		test('auto-flag flags forced mines, undone together with the trigger', () => {
-			const game = pocketGame();
-			game.setAuto({ autoFlag: true, autoReveal: false });
+		test('auto-flag never places flags during play', () => {
+			const game = pocketGame(); // auto-flag is on by default
 
-			// Any move triggers the pass; every number sees its hidden
-			// neighbors are exactly its missing mines.
+			// Every number sees its hidden neighbors are exactly its
+			// missing mines, yet nothing may be flagged for the player.
 			game.toggleFlag({ x: 0, y: 0 });
 
-			const state = game.getState();
-			expect(state.board.flagCount).toBe(4); // player flag + 3 mines
-			expect(state.moveCount).toBe(3); // reveal, flag, auto batch
-
-			game.undo();
-			expect(game.getState().board.flagCount).toBe(0);
-			expect(game.getState().moveCount).toBe(1);
-
-			game.redo();
-			expect(game.getState().board.flagCount).toBe(4);
-			expect(game.getState().moveCount).toBe(3);
+			expect(game.getState().board.flagCount).toBe(1);
+			expect(game.getState().moveCount).toBe(2);
 		});
 
-		test('auto-reveal plays out satisfied numbers until the fixpoint', () => {
+		test('auto-flag off leaves the won board unflagged', () => {
+			const game = pocketGame();
+			game.setAuto({ autoFlag: false, autoReveal: false });
+
+			game.reveal({ x: 0, y: 0 });
+
+			expect(game.getState().status).toBe('won');
+			expect(game.getState().board.flagCount).toBe(0);
+		});
+
+		test('auto-reveal plays out satisfied numbers, undone with the trigger', () => {
 			// 3x3, one mine: flagging it satisfies the 1 at (0,0), and the
 			// reveals cascade number by number to a win.
 			const game = new Game();
@@ -307,25 +307,47 @@ describe('Game', () => {
 			game.setAuto({ autoFlag: false, autoReveal: true });
 
 			game.toggleFlag({ x: 1, y: 0 });
+			expect(game.getState().status).toBe('won');
 
+			// One undo reverts the flag and the whole cascade it caused.
+			game.undo();
+			expect(game.getState().status).toBe('playing');
+			expect(game.getState().moveCount).toBe(1);
+
+			game.redo();
 			expect(game.getState().status).toBe('won');
 		});
 
 		test('auto moves replay from a record like any other move', () => {
-			const game = pocketGame();
-			game.setAuto({ autoFlag: true, autoReveal: false });
-			game.toggleFlag({ x: 0, y: 0 });
+			const game = new Game();
+			game.loadRecord({
+				config: { width: 3, height: 3, bombs: 1 },
+				mines: ['1,0'],
+				moves: [{ type: 'reveal', index: { x: 0, y: 0 } }],
+			});
+			game.setAuto({ autoFlag: false, autoReveal: true });
+			game.toggleFlag({ x: 1, y: 0 });
 
 			const replica = new Game();
+			replica.setAuto({ autoFlag: false, autoReveal: true });
 			replica.loadRecord(game.getRecord());
-			expect(replica.getState().board.flagCount).toBe(4);
+			expect(replica.getState().status).toBe('won');
+			expect(replica.getState().board).toEqual(game.getState().board);
 		});
 
-		test('auto options off by default: nothing is played for you', () => {
+		test('auto-reveal is off by default: nothing is played for you', () => {
 			const game = pocketGame();
-			game.toggleFlag({ x: 0, y: 0 });
-			expect(game.getState().board.flagCount).toBe(1);
+
+			// All mines flagged: every number is satisfied, and (0,0) is
+			// free to auto-reveal — but only if the option were on.
+			game.applyMany('flag', [
+				{ x: 1, y: 0 },
+				{ x: 0, y: 1 },
+				{ x: 1, y: 1 },
+			]);
+
 			expect(game.getState().moveCount).toBe(2);
+			expect(game.getState().status).toBe('playing');
 		});
 	});
 

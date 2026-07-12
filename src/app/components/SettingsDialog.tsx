@@ -52,8 +52,8 @@ export default function SettingsDialog({
 					<Dialog.Title className="dialog-title">Settings</Dialog.Title>
 
 					<ToggleRow
-						label="Auto-flag"
-						hint="Place flags a number proves. Applies from your next move."
+						label="Auto-flag on win"
+						hint="Flag the remaining mines for you once the board is cleared."
 						checked={settings.autoFlag}
 						onChange={(autoFlag) => patch({ autoFlag })}
 					/>

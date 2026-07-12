@@ -37,18 +37,23 @@ export function emptyRecord(config: GameConfig): GameRecord {
 	return { config, mines: [], moves: [] };
 }
 
-export function applyMove(board: Board, move: Move): Board {
+export function applyMove(
+	board: Board,
+	move: Move,
+	autoFlagWin = true,
+): Board {
+	const finish = autoFlagWin ? withWinFlags : (b: Board) => b;
 	switch (move.type) {
 		case 'reveal':
-			return withWinFlags(board.applyAction(Action.reveal(move.index)));
+			return finish(board.applyAction(Action.reveal(move.index)));
 		case 'chord':
-			return withWinFlags(board.applyAction(Action.chord(move.index)));
+			return finish(board.applyAction(Action.chord(move.index)));
 		case 'flag':
 			return board.applyAction(Action.flag(move.index));
 		case 'unflag':
 			return board.applyAction(Action.unflag(move.index));
 		case 'batch':
-			return withWinFlags(
+			return finish(
 				move.indices.reduce(
 					(b, index) =>
 						b.applyAction(
@@ -64,9 +69,9 @@ export function applyMove(board: Board, move: Move): Board {
 
 /**
  * A won board flags its remaining hidden cells (all mines by
- * definition) — the classic end-of-game auto-flag. Applied to every
- * move's result, so replay, undo snapshots and multiplayer replicas
- * agree without recording extra moves.
+ * definition) — the classic end-of-game auto-flag. Derived from the
+ * winning move's result rather than recorded, so replay, undo snapshots
+ * and multiplayer replicas agree without extra moves.
  */
 export function withWinFlags(board: Board): Board {
 	if (!board.isWon) return board;
@@ -76,24 +81,21 @@ export function withWinFlags(board: Board): Board {
 		.reduce((b, cell) => b.applyAction(Action.flag(cell)), board);
 }
 
-/** Which forced follow-ups the game plays by itself after each move. */
+/** What the game does for the player, beyond their own moves. */
 export interface AutoOptions {
-	/** Flag cells some revealed number proves must be mines. */
+	/** Flag the remaining hidden mines the moment the game is won. */
 	readonly autoFlag: boolean;
 	/** Reveal neighbors of numbers already satisfied by their flags. */
 	readonly autoReveal: boolean;
 }
 
 /**
- * One step of the auto-play pass, or null at the fixpoint. Flags come
- * first — new flags are what satisfy numbers and enable reveals. Both
- * follow the flags on the board, right or wrong, exactly like a chord.
+ * The cells one auto-reveal pass opens, or null at the fixpoint: the
+ * hidden neighbors of every number already satisfied by its flags. The
+ * flags are trusted right or wrong, exactly like a chord.
  */
-export function autoStep(
-	board: Board,
-	options: AutoOptions,
-): { action: 'flag' | 'reveal'; indices: Index2D[] } | null {
-	const flags = new Map<string, Index2D>();
+export function autoStep(board: Board, options: AutoOptions): Index2D[] | null {
+	if (!options.autoReveal) return null;
 	const reveals = new Map<string, Index2D>();
 
 	for (const cell of board.cells.toArray()) {
@@ -108,22 +110,12 @@ export function autoStep(
 			(c) => c.state.type === 'flagged',
 		).length;
 		const hidden = neighbors.filter((c) => c.state.type === 'hidden');
-		if (hidden.length === 0) continue;
+		if (hidden.length === 0 || flagged !== cell.state.number) continue;
 
-		const target =
-			options.autoFlag && flagged + hidden.length === cell.state.number
-				? flags
-				: options.autoReveal && flagged === cell.state.number
-					? reveals
-					: null;
-		if (!target) continue;
-		for (const c of hidden) target.set(Index2D.key(c), { x: c.x, y: c.y });
+		for (const c of hidden) reveals.set(Index2D.key(c), { x: c.x, y: c.y });
 	}
 
-	if (flags.size > 0) return { action: 'flag', indices: [...flags.values()] };
-	if (reveals.size > 0)
-		return { action: 'reveal', indices: [...reveals.values()] };
-	return null;
+	return reveals.size > 0 ? [...reveals.values()] : null;
 }
 
 /** Whether a move can reveal cells (and so can start a reveal wave). */
@@ -150,11 +142,14 @@ export function baseBoard(record: GameRecord): Board {
  * moves[i]; the base board is not included. Deterministic — this is
  * what both undo and replay reconstruct from.
  */
-export function boardsForRecord(record: GameRecord): Board[] {
+export function boardsForRecord(
+	record: GameRecord,
+	autoFlagWin = true,
+): Board[] {
 	let board = baseBoard(record);
 	const boards: Board[] = [];
 	for (const move of record.moves) {
-		board = applyMove(board, move);
+		board = applyMove(board, move, autoFlagWin);
 		boards.push(board);
 	}
 	return boards;

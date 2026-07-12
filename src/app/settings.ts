@@ -1,6 +1,6 @@
 /** Player preferences that apply across games (localStorage-backed). */
 export interface AppSettings {
-	/** Auto-play flags a number proves (single player). */
+	/** Flag the remaining mines when a game is won (single player). */
 	readonly autoFlag: boolean;
 	/** Auto-chord numbers already satisfied by their flags (single player). */
 	readonly autoReveal: boolean;
@@ -9,7 +9,7 @@ export interface AppSettings {
 }
 
 export const DEFAULT_APP_SETTINGS: AppSettings = {
-	autoFlag: false,
+	autoFlag: true,
 	autoReveal: false,
 	showBoardControls: true,
 };

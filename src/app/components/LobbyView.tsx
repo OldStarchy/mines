@@ -203,7 +203,7 @@ export default function LobbyView({
 					settings={settings}
 				/>
 				<ToggleSetting
-					label="Auto-flag"
+					label="Auto-flag on win"
 					setting="autoFlag"
 					host={host}
 					settings={settings}
@@ -215,8 +215,9 @@ export default function LobbyView({
 					settings={settings}
 				/>
 				<p className="lobby-hint">
-					Auto-flag places flags a number proves; auto-reveal chords
-					numbers already satisfied by their flags.
+					Auto-flag marks the remaining mines once the board is
+					cleared; auto-reveal chords numbers already satisfied by
+					their flags.
 				</p>
 			</div>
 

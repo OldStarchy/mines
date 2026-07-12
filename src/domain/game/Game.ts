@@ -102,7 +102,7 @@ export default class Game {
 	private boards: Board[] = [];
 	/** Undone moves available for redo, most-recent last. */
 	private future: Move[] = [];
-	private auto: AutoOptions = { autoFlag: false, autoReveal: false };
+	private auto: AutoOptions = { autoFlag: true, autoReveal: false };
 	/**
 	 * Moves played by the auto pass rather than the player. Undo/redo
 	 * treat a player move and its auto follow-ups as one group. Not
@@ -210,36 +210,34 @@ export default class Game {
 	}
 
 	/**
-	 * Enables/disables auto-play of forced follow-ups. Takes effect from
-	 * the next player move — the board is never changed by the toggle
-	 * itself, so switching mid-game is safe (and replicable).
+	 * Configures what the game does for the player: auto-flag (dress the
+	 * won board's remaining mines with flags) and auto-reveal (chord
+	 * satisfied numbers after each move). Takes effect from the next
+	 * move — the board is never changed by the toggle itself, so
+	 * switching mid-game is safe (and replicable).
 	 */
 	setAuto(auto: AutoOptions) {
 		this.auto = { ...auto };
 	}
 
 	/**
-	 * Plays forced follow-ups after a player move. Each pass lands as
-	 * one batch move (its own replay tick) marked as auto, so a single
-	 * undo reverts the player move together with everything it caused.
+	 * Plays auto-reveals after a player move. Each pass lands as one
+	 * batch move (its own replay tick) marked as auto, so a single undo
+	 * reverts the player move together with everything it caused.
 	 */
 	private autoPass() {
-		if (!this.auto.autoFlag && !this.auto.autoReveal) return;
+		if (!this.auto.autoReveal) return;
 		for (;;) {
 			const board = this.currentBoard();
 			if (this.deriveStatus(board) !== 'playing') return;
-			const step = autoStep(board, this.auto);
-			if (!step) return;
-			const move: Move = {
-				type: 'batch',
-				action: step.action,
-				indices: step.indices,
-			};
+			const indices = autoStep(board, this.auto);
+			if (!indices) return;
+			const move: Move = { type: 'batch', action: 'reveal', indices };
 			this.autoMoves.add(move);
 			this.pushMove(
 				move,
-				applyMove(board, move),
-				step.action === 'reveal' ? board : null,
+				applyMove(board, move, this.auto.autoFlag),
+				board,
 			);
 		}
 	}
@@ -285,7 +283,7 @@ export default class Game {
 				this.mines = [...this.seededMines];
 				const base = this.currentBoard();
 				const move: Move = { type: 'reveal', index };
-				this.pushMove(move, applyMove(base, move), base);
+				this.pushMove(move, applyMove(base, move, this.auto.autoFlag), base);
 				this.autoPass();
 				return;
 			}
@@ -298,7 +296,7 @@ export default class Game {
 			this.mines = seeded.mineKeys();
 			this.pushMove(
 				{ type: 'reveal', index },
-				withWinFlags(seeded),
+				this.auto.autoFlag ? withWinFlags(seeded) : seeded,
 				Board.ofSize(this.config.width, this.config.height),
 			);
 			this.autoPass();
@@ -309,7 +307,7 @@ export default class Game {
 		if (!cell || cell.state.type !== 'hidden') return;
 
 		const move: Move = { type: 'reveal', index };
-		this.pushMove(move, applyMove(board, move), board);
+		this.pushMove(move, applyMove(board, move, this.auto.autoFlag), board);
 		this.autoPass();
 	}
 
@@ -318,7 +316,7 @@ export default class Game {
 		const board = this.currentBoard();
 		if (this.deriveStatus(board) !== 'playing') return;
 
-		const next = applyMove(board, { type: 'chord', index });
+		const next = applyMove(board, { type: 'chord', index }, this.auto.autoFlag);
 		const revealed = revealedDiff(board, next).length > 0;
 		const flagged = next.flagCount !== board.flagCount;
 		// A chord that neither reveals nor flags anything isn't a move.
@@ -339,7 +337,7 @@ export default class Game {
 
 		const indices = cells.map((at) => ({ x: at.x, y: at.y }));
 		const move: Move = { type: 'batch', action, indices };
-		const next = applyMove(board, move);
+		const next = applyMove(board, move, this.auto.autoFlag);
 
 		const revealed = revealedDiff(board, next).length > 0;
 		if (!revealed && next.flagCount === board.flagCount) return;
@@ -431,7 +429,9 @@ export default class Game {
 	private redoOne() {
 		const move = this.future.pop()!;
 		this.moves.push(move);
-		this.boards.push(applyMove(this.currentBoard(), move));
+		this.boards.push(
+			applyMove(this.currentBoard(), move, this.auto.autoFlag),
+		);
 	}
 
 	restart(config?: GameConfig) {
@@ -460,7 +460,7 @@ export default class Game {
 		// re-revealing must not re-roll the board (competitive fairness).
 		this.seededMines = record.mines.length > 0 ? [...record.mines] : null;
 		this.moves = [...record.moves];
-		this.boards = boardsForRecord(record);
+		this.boards = boardsForRecord(record, this.auto.autoFlag);
 		this.future = [];
 		this.memory.clear();
 		this.startedAt =

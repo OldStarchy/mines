@@ -14,7 +14,8 @@ export interface MatchSettings {
 	readonly mode: MatchMode;
 	readonly allowUndo: boolean;
 	readonly allowAssistant: boolean;
-	/** Auto-play forced flags/reveals (see AutoOptions) for everyone. */
+	/** Auto options for everyone (see AutoOptions): flag the won board's
+	 * remaining mines; auto-chord satisfied numbers during play. */
 	readonly autoFlag: boolean;
 	readonly autoReveal: boolean;
 }
@@ -24,7 +25,7 @@ export const DEFAULT_SETTINGS: MatchSettings = {
 	mode: 'coop',
 	allowUndo: false,
 	allowAssistant: false,
-	autoFlag: false,
+	autoFlag: true,
 	autoReveal: false,
 };
 
