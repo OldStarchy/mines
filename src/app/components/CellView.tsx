@@ -85,21 +85,10 @@ function CellView({
 				} else if (cell.state.type === 'hidden') {
 					onReveal(cell);
 				}
-				// Taps chord here rather than on pointer-down, so that a
-				// touch drag pans the board without chording in passing.
-				// For the mouse the chord already ran; re-chording is a no-op.
+				// Chording happens on click, not pointer-down: a press that
+				// turns into a viewport pan suppresses the click, so board
+				// drags never chord in passing.
 				if (revealedNumber) onChord(cell);
-			}}
-			// Chording happens on pointer-down so that keeping the button
-			// held and sweeping across numbers chords each one in passing.
-			onPointerDown={(event) => {
-				if (
-					event.pointerType !== 'touch' &&
-					event.button === 0 &&
-					revealedNumber
-				) {
-					onChord(cell);
-				}
 			}}
 			onPointerOver={(event) => {
 				if (event.buttons === 1 && revealedNumber) onChord(cell);

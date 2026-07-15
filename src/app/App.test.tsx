@@ -222,6 +222,53 @@ describe('App', () => {
 		expect(document.querySelector('.cell-revealed')).toBeNull();
 	});
 
+	test('dragging from a numbered cell pans too', async () => {
+		render(<App />);
+		await expect.element(page.getByText('Mines Lab')).toBeVisible();
+
+		(document.querySelector('[data-cell="4,4"]') as HTMLElement).click();
+		await expect.element(page.getByTitle('Undo')).toBeEnabled();
+		await page.getByTitle('Zoom in').click();
+
+		const canvas = () =>
+			document.querySelector('.board-canvas') as HTMLElement;
+		const before = canvas().style.transform;
+		const revealed = document.querySelectorAll('.cell-revealed').length;
+
+		const number = document.querySelector(
+			'.n1, .n2, .n3, .n4, .n5',
+		) as HTMLElement;
+		const pointer = { pointerId: 1, bubbles: true, cancelable: true };
+		number.dispatchEvent(
+			new PointerEvent('pointerdown', {
+				...pointer,
+				button: 0,
+				buttons: 1,
+				clientX: 120,
+				clientY: 120,
+			}),
+		);
+		number.dispatchEvent(
+			new PointerEvent('pointermove', {
+				...pointer,
+				buttons: 1,
+				clientX: 80,
+				clientY: 90,
+			}),
+		);
+		number.dispatchEvent(new PointerEvent('pointerup', pointer));
+
+		await expect.poll(() => canvas().style.transform).not.toBe(before);
+
+		// The pan neither chorded nor revealed anything on the way.
+		number.dispatchEvent(
+			new MouseEvent('click', { bubbles: true, cancelable: true }),
+		);
+		expect(document.querySelectorAll('.cell-revealed')).toHaveLength(
+			revealed,
+		);
+	});
+
 	test('settings persist and hide the floating controls', async () => {
 		render(<App />);
 		await expect.element(page.getByText('Mines Lab')).toBeVisible();

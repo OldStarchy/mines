@@ -85,7 +85,9 @@ describe('BoardView', () => {
 		const cellAt = (key: string) =>
 			document.querySelector(`[data-cell="${key}"]`)!;
 
-		// Press on the first number, sweep over the next two.
+		// Press on the first number, sweep over the next two: they chord
+		// in passing. The pressed cell itself waits for the click — a
+		// press may still become a viewport pan.
 		cellAt('0,1').dispatchEvent(
 			new PointerEvent('pointerdown', {
 				button: 0,
@@ -98,10 +100,13 @@ describe('BoardView', () => {
 				new PointerEvent('pointerover', { buttons: 1, bubbles: true }),
 			);
 		}
+		cellAt('2,1').dispatchEvent(
+			new MouseEvent('click', { bubbles: true, cancelable: true }),
+		);
 
 		expect(
 			onChord.mock.calls.map(([cell]) => `${cell.x},${cell.y}`),
-		).toEqual(['0,1', '1,1', '2,1']);
+		).toEqual(['1,1', '2,1', '2,1']);
 
 		// Sweeping with no button held chords nothing.
 		onChord.mockClear();

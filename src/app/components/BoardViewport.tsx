@@ -54,9 +54,9 @@ function clampView(view: View, viewport: Size, content: Size): View {
  * natural size and is moved with a transform, so panning reaches every
  * edge no matter how narrow the window (flex centering used to clip the
  * left side of wide boards). Gestures: pinch or ctrl+wheel to zoom,
- * wheel / touch-drag / middle-drag to pan; taps and clicks fall through
- * to the cells. The floating controls are position:fixed — always on
- * screen and unaffected by board zoom.
+ * wheel or any drag to pan; taps and clicks fall through to the cells.
+ * The floating controls are position:fixed — always on screen and
+ * unaffected by board zoom.
  */
 export default function BoardViewport({
 	showControls,
@@ -203,11 +203,12 @@ export default function BoardViewport({
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, []);
 
-	// Gestures: one touch, or any mouse drag that travels past the tap
-	// threshold, pans; two touches pinch-zoom. A pan suppresses the
-	// click so cells don't fire after a drag. The one press a drag
-	// never turns into a pan: mouse-left on a revealed number, which
-	// belongs to the sweep-chord gesture.
+	// Gestures: any press — cell or letterbox — turns into a pan once
+	// it travels past the tap threshold, provided the board overflows
+	// the viewport (when it fits there is nothing to pan, and slow
+	// drags keep sweep-chording across numbers). Two touches
+	// pinch-zoom. A pan captures the pointer and suppresses the click,
+	// so cells neither chord in passing nor fire after a drag.
 	const pointers = useRef(new Map<number, { x: number; y: number }>());
 	const pinch = useRef<{
 		dist: number;
@@ -231,14 +232,7 @@ export default function BoardViewport({
 			pinch.current = null; // re-measured on the next move
 			return;
 		}
-		const sweepChord =
-			event.button === 0 &&
-			event.pointerType !== 'touch' &&
-			(event.target as Element).closest(
-				'.n1, .n2, .n3, .n4, .n5, .n6, .n7, .n8',
-			) !== null;
-		const startPan =
-			(event.button === 0 || event.button === 1) && !sweepChord;
+		const startPan = event.button === 0 || event.button === 1;
 		if (startPan && pointers.current.size === 1) {
 			pan.current = {
 				id: event.pointerId,
@@ -294,7 +288,12 @@ export default function BoardViewport({
 		const dy = event.clientY - drag.last.y;
 		drag.moved += Math.abs(dx) + Math.abs(dy);
 		drag.last = { x: event.clientX, y: event.clientY };
-		if (!drag.active && drag.moved > PAN_THRESHOLD) {
+		const { viewport, content } = sizes.current;
+		const { scale } = viewRef.current;
+		const pannable =
+			content.width * scale > viewport.width ||
+			content.height * scale > viewport.height;
+		if (!drag.active && drag.moved > PAN_THRESHOLD && pannable) {
 			drag.active = true;
 			// Capturing keeps the pan out of the cells' pointer handlers.
 			try {
