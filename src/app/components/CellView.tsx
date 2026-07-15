@@ -3,20 +3,24 @@ import type Cell from '../../domain/Cell';
 import type { GameStatus } from '../../domain/game/Game';
 import type { HighlightRole } from '../highlight';
 
-function content(cell: Cell, status: GameStatus): string {
-	if (status === 'lost' && cell.isBomb && cell.state.type !== 'flagged')
-		return '💣';
+/** Icons render as themeable CSS content (glyphs.css); numbers as text. */
+function content(cell: Cell, status: GameStatus): React.ReactNode {
+	const glyph = (kind: string) => <span className={`glyph-${kind}`} />;
+	// Only *hidden* bombs get the mine glyph on loss: the one that was
+	// clicked is revealed and falls through to the boom glyph below.
+	if (status === 'lost' && cell.isBomb && cell.state.type === 'hidden')
+		return glyph('mine');
 	if (status === 'lost' && !cell.isBomb && cell.state.type === 'flagged')
-		return '❌';
+		return glyph('wrong');
 
 	switch (cell.state.type) {
 		case 'hidden':
-			return '';
+			return null;
 		case 'flagged':
-			return '🚩';
+			return glyph('flag');
 		case 'revealed':
-			if (cell.isBomb) return '💥';
-			return cell.state.number === 0 ? '' : String(cell.state.number);
+			if (cell.isBomb) return glyph('boom');
+			return cell.state.number === 0 ? null : String(cell.state.number);
 	}
 }
 

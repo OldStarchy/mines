@@ -77,7 +77,8 @@ export default function Toolbar({
 			<h1 className="title">Mines Lab</h1>
 
 			<span className="counter" title="Mines minus flags">
-				💣 {String(Math.max(-99, minesLeft)).padStart(3, '0')}
+				<span className="glyph-mine" />{' '}
+				{String(Math.max(-99, minesLeft)).padStart(3, '0')}
 			</span>
 
 			<button

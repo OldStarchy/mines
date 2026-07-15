@@ -17,10 +17,10 @@ import BoardViewport from './BoardViewport';
 import FlagModeToggle from './FlagModeToggle';
 import Timer from './Timer';
 
-function progressLabel(progress: PlayerProgress | undefined): string {
+function progressLabel(progress: PlayerProgress | undefined): React.ReactNode {
 	if (!progress) return '0%';
 	if (progress.status === 'won') return 'cleared!';
-	if (progress.status === 'lost') return '💥';
+	if (progress.status === 'lost') return <span className="glyph-boom" />;
 	return `${Math.round((progress.revealed / progress.safeTotal) * 100)}%`;
 }
 
@@ -124,7 +124,8 @@ export default function MatchView({
 			<div className="board-area">
 				<div className="match-bar">
 					<span className="counter" title="Mines minus flags">
-						💣 {String(Math.max(-99, minesLeft)).padStart(3, '0')}
+						<span className="glyph-mine" />{' '}
+						{String(Math.max(-99, minesLeft)).padStart(3, '0')}
 					</span>
 					<Timer state={gameState} />
 					{settings.mode === 'coop' && (

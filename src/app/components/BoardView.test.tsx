@@ -44,9 +44,18 @@ describe('BoardView', () => {
 		await expect.element(page.getByText('3')).toBeVisible();
 		expect(document.querySelectorAll('.cell')).toHaveLength(12);
 		expect(document.querySelectorAll('.cell-hidden')).toHaveLength(6);
+		// Flags are glyph spans, so themes can restyle them in CSS.
+		expect(document.querySelectorAll('.glyph-flag')).toHaveLength(2);
 	});
 
-	for (const theme of ['classic', 'midnight', 'mint', 'dragon', 'dusk']) {
+	for (const theme of [
+		'classic',
+		'midnight',
+		'mint',
+		'meadow',
+		'dragon',
+		'dusk',
+	]) {
 		test(`visual: ${theme} theme`, async () => {
 			renderBoard(theme);
 			await expect.element(page.getByText('3')).toBeVisible();

@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 440 560" fill="#d4527e">
+	<!-- eight petals around the bloom's center at (220,180) -->
+	<g>
+		<ellipse cx="220" cy="90" rx="38" ry="72" />
+		<ellipse cx="220" cy="90" rx="38" ry="72" transform="rotate(45 220 180)" />
+		<ellipse cx="220" cy="90" rx="38" ry="72" transform="rotate(90 220 180)" />
+		<ellipse cx="220" cy="90" rx="38" ry="72" transform="rotate(135 220 180)" />
+		<ellipse cx="220" cy="90" rx="38" ry="72" transform="rotate(180 220 180)" />
+		<ellipse cx="220" cy="90" rx="38" ry="72" transform="rotate(225 220 180)" />
+		<ellipse cx="220" cy="90" rx="38" ry="72" transform="rotate(270 220 180)" />
+		<ellipse cx="220" cy="90" rx="38" ry="72" transform="rotate(315 220 180)" />
+	</g>
+	<!-- heart of the bloom, kept as a ring so the watermark reads as a
+	     flower even at very low opacity -->
+	<circle cx="220" cy="180" r="52" fill="none" stroke="#d4527e" stroke-width="18" />
+	<!-- stem curving down to the corner, with one leaf either side -->
+	<path d="M 214 300
+		Q 200 400 232 470
+		Q 248 510 236 560
+		L 208 560
+		Q 218 508 204 472
+		Q 174 398 188 298 Z" />
+	<path d="M 196 372 Q 130 330 84 356 Q 118 420 196 400 Z" />
+	<path d="M 214 440 Q 280 408 322 438 Q 284 496 212 468 Z" />
+</svg>

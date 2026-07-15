@@ -125,6 +125,38 @@
 	--n8: #9a92b3;
 }
 
+:root[data-theme='meadow'] {
+	color-scheme: light;
+
+	--bg: #f2f6e6;
+	--surface: #fbfdf3;
+	--text: #2c3a1e;
+	--muted: #6b7a55;
+	--border: #c2d3a0;
+	--bevel-light: #ffffff;
+	--bevel-dark: #a6bc80;
+	--cell-hidden: #cfe3a8;
+	--cell-hidden-hover: #c5dd9a;
+	--cell-revealed: #f3f7e7;
+	/* Honey amber, not blood red: you stepped on a hive, not a bomb. */
+	--cell-hit: #f0b429;
+	--accent: #d4527e;
+	--warning-bg: #fdf0d5;
+	--warning-text: #7a5b00;
+	--hl-target: #f2740d;
+	--hl-group: rgba(212, 82, 126, 0.25);
+	--hl-source: #8e44ad;
+
+	--n1: #2c6fc4;
+	--n2: #43813a;
+	--n3: #d6453d;
+	--n4: #7a4bd1;
+	--n5: #a8621f;
+	--n6: #0c8b96;
+	--n7: #2c3a1e;
+	--n8: #6b7a55;
+}
+
 :root[data-theme='mint'] {
 	--bg: #eef7f1;
 	--surface: #ffffff;

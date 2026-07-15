@@ -23,7 +23,11 @@ export default function FlagModeToggle({
 			aria-label="Flag mode"
 			onClick={() => onChange(!flagMode)}
 		>
-			{flagMode ? '🚩' : '⛏️'}
+			{flagMode ? (
+				<span className="glyph-flag" />
+			) : (
+				<span className="glyph-dig" />
+			)}
 		</button>
 	);
 }

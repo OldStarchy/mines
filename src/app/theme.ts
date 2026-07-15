@@ -2,6 +2,7 @@ export const THEMES = {
 	classic: 'Classic',
 	midnight: 'Midnight',
 	mint: 'Mint',
+	meadow: 'Meadow',
 	dragon: 'Dragon',
 	dusk: 'Dusk',
 } as const;

@@ -1,5 +1,25 @@
-/* Dusk-theme-only atmosphere: a violet-to-amber horizon glow and a
-   sparse field of stars, one layer twinkling very slowly. */
+/* Dusk-theme-only atmosphere: a violet-to-amber horizon glow, a sparse
+   field of stars twinkling very slowly, and the moon over the title. */
+
+/* Lanterns mark the dangers after dark. */
+:root[data-theme='dusk'] .glyph-flag::before {
+	content: '🏮';
+}
+
+:root[data-theme='dusk'] .title::before {
+	content: '✦';
+	margin-right: 10px;
+	font-size: 0.7em;
+	color: var(--n4);
+	vertical-align: 0.15em;
+}
+
+:root[data-theme='dusk'] .title::after {
+	content: '🌙';
+	display: inline-block;
+	margin-left: 10px;
+	font-size: 0.85em;
+}
 
 :root[data-theme='dusk'] .app::before {
 	content: '';

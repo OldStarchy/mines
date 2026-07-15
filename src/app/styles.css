@@ -3,6 +3,7 @@
    (e.g. .switch-small refines .switch at equal specificity). */
 
 @import './styles/themes.css';
+@import './styles/glyphs.css';
 @import './styles/base.css';
 @import './styles/controls.css';
 @import './styles/toolbar.css';
@@ -12,5 +13,7 @@
 @import './styles/assistant.css';
 @import './styles/dialog.css';
 @import './styles/multiplayer.css';
+@import './styles/mint.css';
+@import './styles/meadow.css';
 @import './styles/dragon.css';
 @import './styles/dusk.css';

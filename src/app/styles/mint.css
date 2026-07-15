@@ -1,0 +1,22 @@
+/* Mint-theme decorations: lucky clovers for flags and leaves around
+   the title — fresh, but kept quiet next to the louder themes. */
+
+:root[data-theme='mint'] .glyph-flag::before {
+	content: '🍀';
+}
+
+:root[data-theme='mint'] .title::before,
+:root[data-theme='mint'] .title::after {
+	content: '🍃';
+	display: inline-block;
+	font-size: 0.8em;
+}
+
+:root[data-theme='mint'] .title::before {
+	margin-right: 10px;
+	transform: scaleX(-1);
+}
+
+:root[data-theme='mint'] .title::after {
+	margin-left: 10px;
+}

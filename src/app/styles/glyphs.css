@@ -1,0 +1,25 @@
+/* The pictorial vocabulary of the game — flags, mines, the fatal cell,
+   a wrong flag, the dig tool — rendered as CSS content so each theme
+   can swap the whole set (see meadow.css, dragon.css) without touching
+   markup. The spans carry no text; screen readers get their meaning
+   from the surrounding control's label. */
+
+.glyph-flag::before {
+	content: '🚩';
+}
+
+.glyph-mine::before {
+	content: '💣';
+}
+
+.glyph-boom::before {
+	content: '💥';
+}
+
+.glyph-wrong::before {
+	content: '❌';
+}
+
+.glyph-dig::before {
+	content: '⛏️';
+}

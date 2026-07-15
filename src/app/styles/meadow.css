@@ -1,0 +1,116 @@
+/* Meadow-theme decorations: flowers stand in for flags, beehives for
+   mines (the fatal cell releases the bees), daisies flank the title, a
+   watermark bloom in the corner, and petals drift down the screen. */
+
+:root[data-theme='meadow'] .glyph-flag::before {
+	content: '🌸';
+}
+
+:root[data-theme='meadow'] .glyph-mine::before {
+	content: '🍯';
+}
+
+:root[data-theme='meadow'] .glyph-boom::before {
+	content: '🐝';
+}
+
+:root[data-theme='meadow'] .glyph-wrong::before {
+	content: '🥀';
+}
+
+:root[data-theme='meadow'] .title {
+	text-shadow: 0 0 14px rgba(212, 82, 126, 0.25);
+}
+
+:root[data-theme='meadow'] .title::before,
+:root[data-theme='meadow'] .title::after {
+	content: '🌼';
+	display: inline-block;
+	font-size: 0.85em;
+}
+
+:root[data-theme='meadow'] .title::before {
+	margin-right: 10px;
+}
+
+:root[data-theme='meadow'] .title::after {
+	margin-left: 10px;
+	transform: scaleX(-1);
+}
+
+/* Watermark bloom in the lower left. */
+:root[data-theme='meadow'] .app::before {
+	content: '';
+	position: fixed;
+	inset: 0;
+	z-index: -1;
+	pointer-events: none;
+	background: url('../assets/meadow.svg') left -70px bottom -80px / 420px
+		auto no-repeat;
+	opacity: 0.1;
+}
+
+/* A grassy glow along the bottom, and petals: three parallax layers
+   drifting down and slightly sideways. Each moving layer's travel is a
+   whole multiple of its tile size in both axes, so the loop is
+   seamless. */
+:root[data-theme='meadow'] .app::after {
+	content: '';
+	position: fixed;
+	inset: 0;
+	z-index: -1;
+	pointer-events: none;
+	background-image:
+		radial-gradient(
+			120% 45% at 50% 108%,
+			rgba(140, 190, 90, 0.35),
+			transparent 65%
+		),
+		radial-gradient(4px 3px at 50px 70px, rgba(233, 120, 160, 0.7), transparent 70%),
+		radial-gradient(3px 4px at 260px 300px, rgba(244, 170, 200, 0.7), transparent 70%),
+		radial-gradient(3px 3px at 130px 170px, rgba(255, 210, 225, 0.75), transparent 70%),
+		radial-gradient(4px 3px at 230px 50px, rgba(233, 120, 160, 0.55), transparent 70%),
+		radial-gradient(3px 3px at 70px 180px, rgba(250, 240, 160, 0.7), transparent 70%),
+		radial-gradient(3px 4px at 180px 40px, rgba(244, 170, 200, 0.6), transparent 70%);
+	background-size:
+		100% 100%,
+		420px 420px,
+		420px 420px,
+		300px 300px,
+		300px 300px,
+		240px 240px,
+		240px 240px;
+	background-repeat:
+		no-repeat, repeat, repeat, repeat, repeat, repeat, repeat;
+	animation: meadow-petals 60s linear infinite;
+	opacity: 0.6;
+}
+
+@keyframes meadow-petals {
+	from {
+		background-position:
+			0 0,
+			0 0,
+			0 0,
+			0 0,
+			0 0,
+			0 0,
+			0 0;
+	}
+	to {
+		background-position:
+			0 0,
+			420px 840px,
+			420px 840px,
+			300px 900px,
+			300px 900px,
+			240px 960px,
+			240px 960px;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	:root[data-theme='meadow'] .app::after {
+		animation: none;
+	}
+}
