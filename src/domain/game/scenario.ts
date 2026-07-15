@@ -11,11 +11,11 @@ export function maxMines(width: number, height: number): number {
 	return Math.max(1, width * height - 9);
 }
 
-/** Standard mine densities, from the classic beginner/intermediate/expert. */
+/** Mine densities matching our beginner/intermediate/expert presets. */
 export const DENSITIES = {
-	easy: 10 / 81,
-	medium: 40 / 256,
-	hard: 99 / 480,
+	easy: 9 / 81,
+	medium: 36 / 256,
+	hard: 92 / 480,
 } as const;
 
 export type Density = keyof typeof DENSITIES;

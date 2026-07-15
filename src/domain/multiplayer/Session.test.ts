@@ -71,7 +71,9 @@ describe('multiplayer sessions', () => {
 			bob.dispatch({ type: 'reveal', index: { x: 4, y: 4 } });
 
 			expect(host.game.getState().moveCount).toBe(1);
-			expect(host.game.getRecord().mines).toHaveLength(10);
+			expect(host.game.getRecord().mines).toHaveLength(
+				host.game.getState().config.bombs,
+			);
 			for (const guest of [bob, carol]) {
 				expect(guest.game.getRecord().mines).toEqual(
 					host.game.getRecord().mines,

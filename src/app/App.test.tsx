@@ -33,7 +33,7 @@ describe('App', () => {
 
 		await expect
 			.element(page.getByTitle('Mines minus flags'))
-			.toHaveTextContent('010');
+			.toHaveTextContent('009');
 
 		// Right-click flags a hidden cell and decrements the counter.
 		// Pick one with no revealed neighbors: a flag deep in unknown
@@ -61,7 +61,7 @@ describe('App', () => {
 
 		await expect
 			.element(page.getByTitle('Mines minus flags'))
-			.toHaveTextContent('009');
+			.toHaveTextContent('008');
 
 		// The assistant is off by default and explains itself.
 		await expect
@@ -116,7 +116,7 @@ describe('App', () => {
 		);
 		await expect
 			.element(page.getByTitle('Mines minus flags'))
-			.toHaveTextContent('009');
+			.toHaveTextContent('008');
 
 		await page.getByRole('button', { name: /Replay$/ }).click();
 
@@ -133,7 +133,7 @@ describe('App', () => {
 		await page.getByRole('button', { name: 'Back to game' }).click();
 		await expect
 			.element(page.getByTitle('Mines minus flags'))
-			.toHaveTextContent('009');
+			.toHaveTextContent('008');
 		expect(
 			(document.querySelector('.cell') as HTMLButtonElement).disabled,
 		).toBe(false);
@@ -146,7 +146,7 @@ describe('App', () => {
 		(document.querySelector('[data-cell="4,4"]') as HTMLElement).click();
 		await expect
 			.element(page.getByTitle('Mines minus flags'))
-			.toHaveTextContent('010');
+			.toHaveTextContent('009');
 
 		await page.getByRole('button', { name: 'Flag mode' }).click();
 
@@ -158,12 +158,12 @@ describe('App', () => {
 		cell().click(); // left click now flags…
 		await expect
 			.element(page.getByTitle('Mines minus flags'))
-			.toHaveTextContent('009');
+			.toHaveTextContent('008');
 
 		cell().click(); // …and toggles the flag back off
 		await expect
 			.element(page.getByTitle('Mines minus flags'))
-			.toHaveTextContent('010');
+			.toHaveTextContent('009');
 	});
 
 	test('zoom controls rescale the board canvas', async () => {

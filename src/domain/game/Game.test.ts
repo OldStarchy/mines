@@ -27,7 +27,7 @@ describe('Game', () => {
 
 		const state = game.getState();
 		expect(state.status).toBe('playing');
-		expect(state.board.bombCount).toBe(10);
+		expect(state.board.bombCount).toBe(PRESETS.beginner.bombs);
 		expect(state.board.cells.at({ x: 4, y: 4 }).state.type).toBe(
 			'revealed',
 		);

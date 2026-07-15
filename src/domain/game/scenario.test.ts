@@ -8,7 +8,7 @@ import {
 } from './scenario';
 
 describe('scenario', () => {
-	test('recommended mines match the classic presets', () => {
+	test('recommended mines match the presets', () => {
 		expect(recommendedMines(9, 9).easy).toBe(PRESETS.beginner.bombs);
 		expect(recommendedMines(16, 16).medium).toBe(
 			PRESETS.intermediate.bombs,
@@ -33,7 +33,7 @@ describe('scenario', () => {
 	});
 
 	test('configKey is stable and distinct per scenario', () => {
-		expect(configKey(PRESETS.beginner)).toBe('9x9x10');
-		expect(configKey(PRESETS.expert)).toBe('30x16x99');
+		expect(configKey(PRESETS.beginner)).toBe('9x9x9');
+		expect(configKey(PRESETS.expert)).toBe('30x16x92');
 	});
 });

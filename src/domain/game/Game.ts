@@ -23,10 +23,12 @@ export interface GameConfig {
 	readonly bombs: number;
 }
 
+// A shade under the classic 10/40/99: those ratios ask for a bit too
+// much guessing luck.
 export const PRESETS = {
-	beginner: { width: 9, height: 9, bombs: 10 },
-	intermediate: { width: 16, height: 16, bombs: 40 },
-	expert: { width: 30, height: 16, bombs: 99 },
+	beginner: { width: 9, height: 9, bombs: 9 },
+	intermediate: { width: 16, height: 16, bombs: 36 },
+	expert: { width: 30, height: 16, bombs: 92 },
 } as const satisfies Record<string, GameConfig>;
 
 export type PresetName = keyof typeof PRESETS;
