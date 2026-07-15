@@ -114,6 +114,12 @@
 	font-size: 14px;
 }
 
+.dialog-error {
+	margin: 0;
+	font-size: 13px;
+	color: var(--cell-hit);
+}
+
 .dialog-actions {
 	display: flex;
 	justify-content: flex-end;

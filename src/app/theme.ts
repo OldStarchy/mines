@@ -1,3 +1,5 @@
+import { hasCustomTheme } from './customTheme';
+
 export const THEMES = {
 	classic: 'Classic',
 	midnight: 'Midnight',
@@ -7,7 +9,8 @@ export const THEMES = {
 	dusk: 'Dusk',
 } as const;
 
-export type ThemeName = keyof typeof THEMES;
+/** 'custom' is the player-generated theme; only valid while one exists. */
+export type ThemeName = keyof typeof THEMES | 'custom';
 
 const STORAGE_KEY = 'mines.theme';
 
@@ -25,6 +28,9 @@ export function hasStoredTheme(): boolean {
 /** The stored choice, or the system preference until one is made. */
 export function loadTheme(): ThemeName {
 	const stored = localStorage.getItem(STORAGE_KEY);
+	if (stored === 'custom') {
+		return hasCustomTheme() ? 'custom' : systemTheme();
+	}
 	return stored && stored in THEMES ? (stored as ThemeName) : systemTheme();
 }
 

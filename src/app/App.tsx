@@ -17,6 +17,7 @@ import ReplayControls from './components/ReplayControls';
 import ResumeDialog from './components/ResumeDialog';
 import ThemedSelect from './components/ThemedSelect';
 import Toolbar from './components/Toolbar';
+import { initCustomTheme, loadCustomTheme } from './customTheme';
 import type { Highlight } from './highlight';
 import { hasSave, loadLastConfig } from './persistence';
 import { loadSettings, saveSettings, type AppSettings } from './settings';
@@ -39,7 +40,11 @@ export default function App({ connector }: { connector?: Connector }) {
 	);
 	const { game, state, resume, noteClick, noteAssist } =
 		useGame(initialConfig);
-	const [theme, setTheme] = useState<ThemeName>(loadTheme);
+	const [theme, setTheme] = useState<ThemeName>(() => {
+		// A saved custom theme mounts its stylesheet before first paint.
+		initCustomTheme();
+		return loadTheme();
+	});
 	const [settings, setSettings] = useState<AppSettings>(loadSettings);
 	const [flagMode, setFlagMode] = useState(false);
 	const [assist, setAssist] = useState(false);
@@ -152,6 +157,10 @@ export default function App({ connector }: { connector?: Connector }) {
 	};
 
 	if (session) {
+		const custom = loadCustomTheme();
+		const themeItems: Record<string, string> = custom
+			? { ...THEMES, custom: custom.name }
+			: { ...THEMES };
 		return (
 			<div className="app">
 				<header className="toolbar">
@@ -160,8 +169,10 @@ export default function App({ connector }: { connector?: Connector }) {
 						<ThemedSelect
 							ariaLabel="Theme"
 							value={theme}
-							items={THEMES}
-							onValueChange={chooseTheme}
+							items={themeItems}
+							onValueChange={(name) =>
+								chooseTheme(name as ThemeName)
+							}
 						/>
 					</div>
 				</header>

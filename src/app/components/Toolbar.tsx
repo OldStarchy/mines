@@ -5,6 +5,7 @@ import type {
 } from '../../domain/game/Game';
 import { PRESETS } from '../../domain/game/Game';
 import { configKey, parseConfigKey } from '../../domain/game/scenario';
+import { loadCustomTheme } from '../customTheme';
 import { hasSaveInProgress, savedConfigs } from '../persistence';
 import { THEMES, type ThemeName } from '../theme';
 import type { AppSettings } from '../settings';
@@ -13,6 +14,7 @@ import ScenarioDialog from './ScenarioDialog';
 import SettingsDialog from './SettingsDialog';
 import StatsDialog from './StatsDialog';
 import ThemedSelect from './ThemedSelect';
+import ThemeStudioDialog from './ThemeStudioDialog';
 import Timer from './Timer';
 
 export { PRESET_LABELS, presetOf } from './presets';
@@ -85,6 +87,11 @@ export default function Toolbar({
 
 	const selected = preset ?? `custom:${configKey(state.config)}`;
 
+	// The generated theme joins the built-ins under its own name.
+	const themeItems: Record<string, string> = { ...THEMES };
+	const customTheme = loadCustomTheme();
+	if (customTheme) themeItems.custom = customTheme.name;
+
 	return (
 		<header className="toolbar">
 			<h1 className="title">Mines Lab</h1>
@@ -154,9 +161,10 @@ export default function Toolbar({
 				<ThemedSelect
 					ariaLabel="Theme"
 					value={theme}
-					items={THEMES}
-					onValueChange={onTheme}
+					items={themeItems}
+					onValueChange={(name) => onTheme(name as ThemeName)}
 				/>
+				<ThemeStudioDialog onTheme={onTheme} />
 				<StatsDialog config={state.config} />
 				<SettingsDialog settings={settings} onChange={onSettings} />
 			</div>
