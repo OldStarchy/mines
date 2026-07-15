@@ -3,6 +3,24 @@ import Action from './Action';
 import Board from './Board';
 import Cell from './Cell';
 import CellState from './CellState';
+import Index2D from './Index2D';
+import Range2D from './Range2D';
+
+/** Safe cells reachable from the origin, allowing diagonal steps. */
+function reachableSafeCells(board: Board, origin: Index2D): number {
+	const seen = new Set([Index2D.key(origin)]);
+	const queue = [board.cells.at(origin)];
+	while (queue.length > 0) {
+		for (const next of board.cells
+			.slice(Range2D.around(queue.pop()!))
+			.toArray()) {
+			if (next.isBomb || seen.has(Index2D.key(next))) continue;
+			seen.add(Index2D.key(next));
+			queue.push(next);
+		}
+	}
+	return seen.size;
+}
 
 describe('Board', () => {
 	describe('fromStringNotation', () => {
@@ -80,6 +98,30 @@ describe('Board', () => {
 			expect(board.bombCount).toBe(10);
 			expect(board.cells.at({ x: 4, y: 4 }).state.type).toBe('revealed');
 			expect(board.isLost).toBe(false);
+		});
+
+		test('placeBombsAndReveal leaves no walled-off safe pockets', () => {
+			// Dense boards are where random placement pockets cells; every
+			// safe cell must stay diagonally reachable from the opening,
+			// or the pocket could only be finished by guessing.
+			for (const origin of [
+				{ x: 0, y: 0 },
+				{ x: 4, y: 4 },
+				{ x: 8, y: 0 },
+			]) {
+				for (let run = 0; run < 10; run++) {
+					const bombs = 50;
+					const board = Board.ofSize(9, 9).applyAction(
+						Action.placeBombsAndReveal(origin, bombs),
+					);
+
+					expect(board.bombCount).toBe(bombs);
+					expect(board.isLost).toBe(false);
+					expect(reachableSafeCells(board, origin)).toBe(
+						81 - bombs,
+					);
+				}
+			}
 		});
 	});
 
