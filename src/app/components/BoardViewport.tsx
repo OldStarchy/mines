@@ -203,9 +203,11 @@ export default function BoardViewport({
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, []);
 
-	// Gestures: one touch (or middle mouse, or mouse on the letterbox)
-	// pans; two touches pinch-zoom. A pan suppresses the click so cells
-	// don't fire after a drag.
+	// Gestures: one touch, or any mouse drag that travels past the tap
+	// threshold, pans; two touches pinch-zoom. A pan suppresses the
+	// click so cells don't fire after a drag. The one press a drag
+	// never turns into a pan: mouse-left on a revealed number, which
+	// belongs to the sweep-chord gesture.
 	const pointers = useRef(new Map<number, { x: number; y: number }>());
 	const pinch = useRef<{
 		dist: number;
@@ -229,11 +231,14 @@ export default function BoardViewport({
 			pinch.current = null; // re-measured on the next move
 			return;
 		}
-		const onBackground = !(event.target as Element).closest('.cell');
+		const sweepChord =
+			event.button === 0 &&
+			event.pointerType !== 'touch' &&
+			(event.target as Element).closest(
+				'.n1, .n2, .n3, .n4, .n5, .n6, .n7, .n8',
+			) !== null;
 		const startPan =
-			event.button === 1 ||
-			event.pointerType === 'touch' ||
-			(event.button === 0 && onBackground);
+			(event.button === 0 || event.button === 1) && !sweepChord;
 		if (startPan && pointers.current.size === 1) {
 			pan.current = {
 				id: event.pointerId,
@@ -291,7 +296,12 @@ export default function BoardViewport({
 		drag.last = { x: event.clientX, y: event.clientY };
 		if (!drag.active && drag.moved > PAN_THRESHOLD) {
 			drag.active = true;
-			viewportRef.current?.setPointerCapture(event.pointerId);
+			// Capturing keeps the pan out of the cells' pointer handlers.
+			try {
+				viewportRef.current?.setPointerCapture(event.pointerId);
+			} catch {
+				// the pointer is already gone — the pan still works
+			}
 		}
 		if (drag.active) {
 			applyView((current) => ({

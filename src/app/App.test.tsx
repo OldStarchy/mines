@@ -181,6 +181,47 @@ describe('App', () => {
 		expect(canvas().style.transform).toContain('scale(1)');
 	});
 
+	test('dragging from a cell pans the board instead of revealing', async () => {
+		render(<App />);
+		await expect.element(page.getByText('Mines Lab')).toBeVisible();
+
+		// Zoom in so the board overflows and has somewhere to pan to.
+		await page.getByTitle('Zoom in').click();
+		const canvas = () =>
+			document.querySelector('.board-canvas') as HTMLElement;
+		const before = canvas().style.transform;
+
+		const cell = document.querySelector('.cell-hidden') as HTMLElement;
+		const pointer = { pointerId: 1, bubbles: true, cancelable: true };
+		cell.dispatchEvent(
+			new PointerEvent('pointerdown', {
+				...pointer,
+				button: 0,
+				buttons: 1,
+				clientX: 120,
+				clientY: 120,
+			}),
+		);
+		cell.dispatchEvent(
+			new PointerEvent('pointermove', {
+				...pointer,
+				buttons: 1,
+				clientX: 80,
+				clientY: 90,
+			}),
+		);
+		cell.dispatchEvent(new PointerEvent('pointerup', pointer));
+
+		// The drag panned the canvas…
+		await expect.poll(() => canvas().style.transform).not.toBe(before);
+
+		// …and swallowed the click that trails it: nothing is revealed.
+		cell.dispatchEvent(
+			new MouseEvent('click', { bubbles: true, cancelable: true }),
+		);
+		expect(document.querySelector('.cell-revealed')).toBeNull();
+	});
+
 	test('settings persist and hide the floating controls', async () => {
 		render(<App />);
 		await expect.element(page.getByText('Mines Lab')).toBeVisible();

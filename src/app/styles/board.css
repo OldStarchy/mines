@@ -59,6 +59,12 @@
 	cursor: default;
 }
 
+/* Finished and replayed boards disable their cells; letting events
+   pass through keeps drags anywhere on the board panning it. */
+.cell:disabled {
+	pointer-events: none;
+}
+
 /* flood-fill wave: newly revealed cells pop in, delayed by distance */
 @keyframes cell-pop {
 	from {
