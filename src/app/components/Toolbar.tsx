@@ -4,11 +4,11 @@ import type {
 	PresetName,
 } from '../../domain/game/Game';
 import { PRESETS } from '../../domain/game/Game';
-import { configKey } from '../../domain/game/scenario';
-import { hasSaveInProgress } from '../persistence';
+import { configKey, parseConfigKey } from '../../domain/game/scenario';
+import { hasSaveInProgress, savedConfigs } from '../persistence';
 import { THEMES, type ThemeName } from '../theme';
 import type { AppSettings } from '../settings';
-import { PRESET_LABELS, presetOf } from './presets';
+import { configLabel, PRESET_LABELS, presetOf } from './presets';
 import ScenarioDialog from './ScenarioDialog';
 import SettingsDialog from './SettingsDialog';
 import StatsDialog from './StatsDialog';
@@ -59,18 +59,31 @@ export default function Toolbar({
 	const withSaveDot = (label: string, config: GameConfig) =>
 		inProgress(config) ? `${label} ●` : label;
 
-	const presetItems: Record<string, string> = Object.fromEntries(
+	const difficultyItems: Record<string, string> = Object.fromEntries(
 		(Object.keys(PRESET_LABELS) as PresetName[]).map((name) => [
 			name,
 			withSaveDot(PRESET_LABELS[name], PRESETS[name]),
 		]),
 	);
-	if (!preset) {
-		presetItems.custom = withSaveDot(
-			`Custom ${state.config.width}×${state.config.height}`,
-			state.config,
+	// Custom boards: the active one, plus every one with a game to
+	// resume — off the list they'd be impossible to come back to.
+	const customs = new Map<string, GameConfig>();
+	for (const config of savedConfigs()) {
+		if (!presetOf(config) && hasSaveInProgress(config)) {
+			customs.set(configKey(config), config);
+		}
+	}
+	if (!preset) customs.set(configKey(state.config), state.config);
+	for (const [key, config] of [...customs.entries()].sort(([a], [b]) =>
+		a.localeCompare(b, undefined, { numeric: true }),
+	)) {
+		difficultyItems[`custom:${key}`] = withSaveDot(
+			configLabel(config),
+			config,
 		);
 	}
+
+	const selected = preset ?? `custom:${configKey(state.config)}`;
 
 	return (
 		<header className="toolbar">
@@ -116,10 +129,16 @@ export default function Toolbar({
 			<div className="toolbar-controls">
 				<ThemedSelect
 					ariaLabel="Difficulty"
-					value={preset ?? 'custom'}
-					items={presetItems}
+					value={selected}
+					items={difficultyItems}
 					onValueChange={(name) => {
-						if (name !== 'custom') {
+						if (name === selected) return; // no self-restarts
+						if (name.startsWith('custom:')) {
+							const config = parseConfigKey(
+								name.slice('custom:'.length),
+							);
+							if (config) onSelectConfig(config);
+						} else {
 							onSelectConfig(PRESETS[name as PresetName]);
 						}
 					}}

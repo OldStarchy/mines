@@ -4,7 +4,7 @@ import {
 	serializeRecord,
 	type GameRecord,
 } from '../domain/game/GameRecord';
-import { configKey } from '../domain/game/scenario';
+import { configKey, parseConfigKey } from '../domain/game/scenario';
 
 const SAVE_PREFIX = 'mines.save.';
 const META_SUFFIX = '.meta';
@@ -95,6 +95,23 @@ export function hasSaveInProgress(config: GameConfig): boolean {
 	const meta = loadMeta(config);
 	// Saves from before meta existed can't tell; assume resumable.
 	return meta ? meta.status === 'playing' : true;
+}
+
+/** Every config with a saved game, whatever its status. */
+export function savedConfigs(): GameConfig[] {
+	const configs: GameConfig[] = [];
+	try {
+		for (let i = 0; i < localStorage.length; i++) {
+			const key = localStorage.key(i);
+			if (!key?.startsWith(SAVE_PREFIX)) continue;
+			if (key.endsWith(META_SUFFIX)) continue;
+			const config = parseConfigKey(key.slice(SAVE_PREFIX.length));
+			if (config) configs.push(config);
+		}
+	} catch {
+		// disabled storage — nothing saved, then
+	}
+	return configs;
 }
 
 export function clearSave(config: GameConfig) {

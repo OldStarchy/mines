@@ -1,15 +1,10 @@
 import { Dialog } from '@base-ui/react/dialog';
 import { useMemo, useState } from 'react';
 import type { GameConfig } from '../../domain/game/Game';
-import { configKey } from '../../domain/game/scenario';
+import { configKey, parseConfigKey } from '../../domain/game/scenario';
 import { loadAllStats, normalizeStats } from '../stats';
 import { configLabel } from './presets';
 import ThemedSelect from './ThemedSelect';
-
-function parseKey(key: string): GameConfig {
-	const [width, height, bombs] = key.split('x').map(Number);
-	return { width, height, bombs };
-}
 
 function formatTime(ms: number): string {
 	const seconds = Math.floor(ms / 1000);
@@ -59,7 +54,10 @@ export default function StatsDialog({ config }: { config: GameConfig }) {
 						ariaLabel="Statistics board"
 						value={key}
 						items={Object.fromEntries(
-							keys.map((k) => [k, configLabel(parseKey(k))]),
+							keys.map((k) => {
+								const config = parseConfigKey(k);
+								return [k, config ? configLabel(config) : k];
+							}),
 						)}
 						onValueChange={setPicked}
 					/>

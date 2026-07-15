@@ -237,6 +237,35 @@ describe('App', () => {
 		await expect.element(page.getByText('0.33')).toBeVisible();
 	});
 
+	test('a saved custom board is listed in the difficulty menu', async () => {
+		// A custom 5x5 game sits saved while the app opens on beginner:
+		// without a menu entry it would be impossible to resume.
+		const config = { width: 5, height: 5, bombs: 3 };
+		localStorage.setItem(
+			'mines.save.5x5x3',
+			serializeRecord({
+				config,
+				mines: ['1,0', '0,1', '1,1'],
+				moves: [{ type: 'reveal', index: { x: 4, y: 4 } }],
+			}),
+		);
+
+		render(<App />);
+		await expect.element(page.getByText('Mines Lab')).toBeVisible();
+		expect(document.querySelectorAll('.cell')).toHaveLength(81);
+
+		await page.getByLabelText('Difficulty').click();
+		await page.getByText('Custom (3/5×5)', { exact: false }).click();
+		await page.getByRole('button', { name: 'Resume' }).click();
+
+		// The saved game is back: 5x5, all but the mine pocket revealed.
+		await expect
+			.element(page.getByTitle('Mines minus flags'))
+			.toHaveTextContent('003');
+		expect(document.querySelectorAll('.cell')).toHaveLength(25);
+		expect(document.querySelectorAll('.cell-revealed')).toHaveLength(21);
+	});
+
 	test('restores the saved game after a remount', async () => {
 		const first = await render(<App />);
 		await expect.element(page.getByText('Mines Lab')).toBeVisible();

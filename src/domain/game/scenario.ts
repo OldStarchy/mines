@@ -57,3 +57,12 @@ export function normalizeConfig(config: GameConfig): GameConfig {
 export function configKey(config: GameConfig): string {
 	return `${config.width}x${config.height}x${config.bombs}`;
 }
+
+/** The config a key stands for, or null if it isn't a configKey. */
+export function parseConfigKey(key: string): GameConfig | null {
+	const parts = key.split('x').map(Number);
+	if (parts.length !== 3) return null;
+	if (parts.some((n) => !Number.isInteger(n) || n <= 0)) return null;
+	const [width, height, bombs] = parts;
+	return { width, height, bombs };
+}

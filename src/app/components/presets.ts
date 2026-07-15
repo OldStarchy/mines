@@ -18,10 +18,10 @@ export function presetOf(config: GameConfig): PresetName | null {
 	);
 }
 
-/** Human label for a config: its preset name, or its dimensions. */
+/** Human label for a config: its preset name, or mines/dimensions. */
 export function configLabel(config: GameConfig): string {
 	const preset = presetOf(config);
 	return preset
 		? PRESET_LABELS[preset]
-		: `Custom ${config.width}×${config.height}, ${config.bombs} mines`;
+		: `Custom (${config.bombs}/${config.width}×${config.height})`;
 }
